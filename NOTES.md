@@ -100,6 +100,12 @@ Spec references: `wispmap/docs/03-collector-protocol.md` (§7 RouterOS adapter),
 - `state-changes` is a counter → a jump between polls = adjacency flapped (useful for `ospf_neighbor_down` / flap detection without catching the moment).
 - `adjacency` is a duration → time since last (re)form; resetting = a flap we missed.
 
+## Tooling gotchas
+
+- Never use `sudo` inside the project/home dir: a root-owned `.gitignore` blocked VS Code saves (EACCES). Fix: `sudo chown gigahost:gigahost <file>`.
+- VS Code Remote-SSH: extensions (Python/Pylance) must be installed **in SSH: wispmap**, otherwise no Testing panel.
+- `.vscode/` is git-ignored (personal editor settings).
+
 ## librouteros gotchas
 
 - Commands are **lazy generators**: nothing is sent until iterated → always `tuple(...)` / `list(...)`. An un-iterated `set` silently does nothing.
@@ -129,7 +135,7 @@ Spec references: `wispmap/docs/03-collector-protocol.md` (§7 RouterOS adapter),
 |---|---|---|
 | 8 Project init | ✅ | uv project, librouteros + python-dotenv, pytest |
 | 9 Explore API | ✅ | 4 fixtures in `tests/fixtures/chr/` (resource, interface ×4, ip_neighbor ×3, ospf_neighbor ×1); `tests/__init__.py` |
-| 10 Parsing helpers | ⬜ | |
+| 10 Parsing helpers | ✅ | `parse_mac` (zero MAC → None), `parse_version`, `parse_duration` (units + hh:mm:ss tail, ValueError on garbage); 21 tests. Live: `2h6m33s` → 7593 s, OSPF adjacency `1h26m25s` → 5185 s |
 | 11 Normalise resource/interface | ⬜ | needs fixtures from Step 9 |
 | 12 Rates | ⬜ | |
 | 13 fping | ⬜ | |
