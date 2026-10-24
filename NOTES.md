@@ -47,6 +47,10 @@ Spec references: `wispmap/docs/03-collector-protocol.md` (§7 RouterOS adapter),
 
 - Counters (`rx-byte`, `tx-byte`, …) are `int`; `running` / `disabled` are `bool`.
 - MAC addresses are UPPERCASE → normalise to lowercase.
+- Fixture (CHR-CORE): `ether1` 08:00:27:FC:D4:96 running, `ether2` 08:00:27:4A:3A:09 running, `ether3` 08:00:27:F6:C6:4D **not running** (L3 disabled), `lo`.
+- `lo` is RouterOS 7's **built-in loopback** (`type: loopback`, MAC `00:00:00:00:00:00`) — no bridge needed on v7.
+- All-zero MAC → `parse_mac` returns `None`; otherwise every loopback in the network would "match" every other one in link discovery.
+- Extra keys seen: `actual-mtu`, `fp-rx-byte`/`fp-tx-byte` (fast-path counters), `tx-queue-drop`, `last-link-up-time`, `vrf`.
 
 ### /system/routerboard
 
@@ -78,6 +82,23 @@ Spec references: `wispmap/docs/03-collector-protocol.md` (§7 RouterOS adapter),
 - `ipv6` is bool; `age` / `uptime` are duration strings.
 - `interface` can be `ether2,bridge1` on bridged ports (not in this lab) → split on comma, take first.
 - All three discovery protocols on by default (`cdp,lldp,mndp`).
+- **LAN side (`ether1`) has 2 neighbours**, both via LLDP only, with empty `identity`/`platform`/`version` and a nonsense caps list (`bridge,wlan-ap,router,telephone,docsis-cable-device`):
+  - `50:3D:7F:23:BE:10` = the ISP/LAN router (192.168.1.254)
+  - `B4:2E:99:FE:61:DC` = the Windows host (192.168.1.147)
+- → Confirms spec rule: >1 neighbour on one interface = shared segment/switch → **suggest only, never auto-link**.
+- → Neighbours with empty identity/platform are low-confidence: show in "Discovered" only, never offer as RouterOS devices.
+
+### /routing/ospf/neighbor (on CHR-CORE)
+
+```python
+{instance: default, area: backbone, interface: ether2, address: 10.0.1.2,
+ router-id: 10.255.255.2, state: Full, state-changes: 5, adjacency: 40m20s,
+ timeout: 40s, dynamic: True}
+```
+
+- `state` is capitalised (`Full`, `ExStart`) → normalise to lowercase.
+- `state-changes` is a counter → a jump between polls = adjacency flapped (useful for `ospf_neighbor_down` / flap detection without catching the moment).
+- `adjacency` is a duration → time since last (re)form; resetting = a flap we missed.
 
 ## librouteros gotchas
 
@@ -99,13 +120,15 @@ Spec references: `wispmap/docs/03-collector-protocol.md` (§7 RouterOS adapter),
 2. Feature probing: unsupported menus are cached per device, not reported as poll errors.
 3. Neighbour `address` is a suggestion only; management IP is user-confirmed (prefer loopback).
 4. Consider `software-id` as a secondary device identity (spec change candidate for `Device`).
+5. Ignore all-zero MACs in link matching.
+6. Normalise OSPF state to lowercase; use `state-changes` delta to detect flaps between polls.
 
 ## Progress
 
 | Step | Status | Notes |
 |---|---|---|
 | 8 Project init | ✅ | uv project, librouteros + python-dotenv, pytest |
-| 9 Explore API | ✅ (fixtures pending) | observations above; `tests/fixtures/chr/` is still empty and `tests/__init__.py` missing |
+| 9 Explore API | ✅ | 4 fixtures in `tests/fixtures/chr/` (resource, interface ×4, ip_neighbor ×3, ospf_neighbor ×1); `tests/__init__.py` |
 | 10 Parsing helpers | ⬜ | |
 | 11 Normalise resource/interface | ⬜ | needs fixtures from Step 9 |
 | 12 Rates | ⬜ | |
@@ -116,5 +139,5 @@ Spec references: `wispmap/docs/03-collector-protocol.md` (§7 RouterOS adapter),
 
 ## Open questions
 
-- Does any LAN device announce itself on CHR-CORE `ether1`? (`len(nb)` on CORE)
+- ~~Does any LAN device announce itself on CHR-CORE `ether1`?~~ Yes — router + Windows host via LLDP (see /ip/neighbor).
 - v6 behaviour of everything above — needs a v6 CHR or fixtures from a real v6 device.
