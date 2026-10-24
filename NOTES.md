@@ -106,6 +106,8 @@ Spec references: `wispmap/docs/03-collector-protocol.md` (§7 RouterOS adapter),
 - VS Code Remote-SSH: extensions (Python/Pylance) must be installed **in SSH: wispmap**, otherwise no Testing panel.
 - `.vscode/` is git-ignored (personal editor settings).
 
+- Python name shadowing: a `def poll_interfaces` pasted into the test file silently replaced the imported one (NameError on `parse_mac`). Code goes in `src/`, tests only call it.
+
 ## librouteros gotchas
 
 - Commands are **lazy generators**: nothing is sent until iterated → always `tuple(...)` / `list(...)`. An un-iterated `set` silently does nothing.
@@ -136,7 +138,7 @@ Spec references: `wispmap/docs/03-collector-protocol.md` (§7 RouterOS adapter),
 | 8 Project init | ✅ | uv project, librouteros + python-dotenv, pytest |
 | 9 Explore API | ✅ | 4 fixtures in `tests/fixtures/chr/` (resource, interface ×4, ip_neighbor ×3, ospf_neighbor ×1); `tests/__init__.py` |
 | 10 Parsing helpers | ✅ | `parse_mac` (zero MAC → None), `parse_version`, `parse_duration` (units + hh:mm:ss tail, ValueError on garbage); 21 tests. Live: `2h6m33s` → 7593 s, OSPF adjacency `1h26m25s` → 5185 s |
-| 11 Normalise resource/interface | ⬜ | needs fixtures from Step 9 |
+| 11 Normalise resource/interface | ✅ | `poll_system`, `poll_interfaces` + `FakeApi` (reads fixtures); 24 tests. Live on TWR-A/TWR-B: clean output, `lo` mac None, TWR-B ether2 (L3) running False |
 | 12 Rates | ⬜ | |
 | 13 fping | ⬜ | |
 | 14 Config | ⬜ | |
