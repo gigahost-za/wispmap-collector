@@ -1,0 +1,25 @@
+[project]
+name = "wispmap-collector"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Oelof", email = "admin@gigahost.co.za" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "librouteros>=4.2.2",
+    "python-dotenv>=1.2.4",
+]
+
+[project.scripts]
+wispmap-collector = "wispmap_collector:main"
+
+[build-system]
+requires = ["uv_build>=0.13.5,<0.14.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
