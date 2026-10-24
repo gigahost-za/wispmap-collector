@@ -1,0 +1,15 @@
+[
+  {
+    ".id": "*F3FDDC00",
+    "instance": "default",
+    "area": "backbone",
+    "interface": "ether2",
+    "address": "10.0.1.2",
+    "router-id": "10.255.255.2",
+    "state": "Full",
+    "state-changes": 5,
+    "adjacency": "40m20s",
+    "timeout": "40s",
+    "dynamic": true
+  }
+]

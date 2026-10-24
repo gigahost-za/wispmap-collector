@@ -1,0 +1,21 @@
+[
+  {
+    "uptime": "1h20m28s",
+    "version": "7.23.8 (long-term)",
+    "build-time": "2026-10-08 09:46:16",
+    "factory-software": "7.1",
+    "free-memory": 850096128,
+    "total-memory": 1073741824,
+    "cpu": "Intel(R)",
+    "cpu-count": 1,
+    "cpu-frequency": 3599,
+    "cpu-load": 0,
+    "free-hdd-space": 72491008,
+    "total-hdd-space": 93564928,
+    "write-sect-since-reboot": 480,
+    "write-sect-total": 480,
+    "architecture-name": "x86_64",
+    "board-name": "CHR innotek GmbH VirtualBox",
+    "platform": "MikroTik"
+  }
+]
