@@ -85,6 +85,10 @@ Spec references: `wispmap/docs/03-collector-protocol.md` (§7 RouterOS adapter),
 - `MultiTrapError` (router sent >1 `!trap`) is **not** a subclass of `TrapError` → catch both.
 - Single trap example: `TrapError: not enough permissions (9)`.
 
+## python-dotenv gotchas
+
+- `load_dotenv()` with no path calls `find_dotenv()`, which inspects the caller's file. Code piped via stdin (`python - <<EOF`) has no file → `AssertionError` in `find_dotenv`. Fix: `load_dotenv(".env")`. In the real collector pass an explicit path (env var `WISPMAP_ENV_FILE`, default `.env`) — no magic lookup in Docker.
+
 ## Security checks
 
 - ✅ `wispmon` is read-only: `set` on /system/identity → `TrapError: not enough permissions (9)`.
