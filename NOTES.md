@@ -108,6 +108,14 @@ Spec references: `wispmap/docs/03-collector-protocol.md` (§7 RouterOS adapter),
 
 - Python name shadowing: a `def poll_interfaces` pasted into the test file silently replaced the imported one (NameError on `parse_mac`). Code goes in `src/`, tests only call it.
 
+## fping observations (5.1)
+
+- Results go to **stderr**; stdout is empty with `-q`.
+- Host column is padded: `10.255.255.1  : 0.251 0.223 0.274` → split on " : " and strip.
+- Lost packet = `-`; exit code 1 when any host is down (normal), 2 = name not resolved, ≥3 = real error.
+- Ubuntu package ships with `cap_net_raw=ep` → works without root. In Docker: grant `CAP_NET_RAW`.
+- Runtime ≈ count × interval + timeout (3 × 0.2 s + 1 s ≈ 1.5 s), regardless of host count.
+
 ## librouteros gotchas
 
 - Commands are **lazy generators**: nothing is sent until iterated → always `tuple(...)` / `list(...)`. An un-iterated `set` silently does nothing.
@@ -140,7 +148,7 @@ Spec references: `wispmap/docs/03-collector-protocol.md` (§7 RouterOS adapter),
 | 10 Parsing helpers | ✅ | `parse_mac` (zero MAC → None), `parse_version`, `parse_duration` (units + hh:mm:ss tail, ValueError on garbage); 21 tests. Live: `2h6m33s` → 7593 s, OSPF adjacency `1h26m25s` → 5185 s |
 | 11 Normalise resource/interface | ✅ | `poll_system`, `poll_interfaces` + `FakeApi` (reads fixtures); 24 tests. Live on TWR-A/TWR-B: clean output, `lo` mac None, TWR-B ether2 (L3) running False |
 | 12 Rates | ✅ | `RateCalculator`: None on first/missing/reset/gap/dt<=0; 7 tests. Live (ping 1400 B @0.2 s via CORE): ether1 rx ≈58 kbit/s (requests in from LAN), ether2 rx ≈52 kbit/s (replies from TWR-A) |
-| 13 fping | ⬜ | |
+| 13 fping | ✅ | `build_fping_cmd`, `parse_fping`, async `run_ping` (+`FpingError` on exit ≥3); 8 tests incl. 1 `@lab`. Live: 4 hosts in 1.5 s; RTT grows per hop: CORE 0.22 ms, TWR-A 0.52, TWR-B 0.74; .99 recv 0 |
 | 14 Config | ⬜ | |
 | 15 Runner | ⬜ | |
 | 16 Break things | ⬜ | |

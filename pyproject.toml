@@ -23,3 +23,6 @@ build-backend = "uv_build"
 dev = [
     "pytest>=9.1.1",
 ]
+
+[tool.pytest.ini_options]
+markers = ["lab: needs the CHR lab network (skip with -m 'not lab')"]
