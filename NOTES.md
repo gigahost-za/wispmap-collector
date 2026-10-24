@@ -139,7 +139,7 @@ Spec references: `wispmap/docs/03-collector-protocol.md` (§7 RouterOS adapter),
 | 9 Explore API | ✅ | 4 fixtures in `tests/fixtures/chr/` (resource, interface ×4, ip_neighbor ×3, ospf_neighbor ×1); `tests/__init__.py` |
 | 10 Parsing helpers | ✅ | `parse_mac` (zero MAC → None), `parse_version`, `parse_duration` (units + hh:mm:ss tail, ValueError on garbage); 21 tests. Live: `2h6m33s` → 7593 s, OSPF adjacency `1h26m25s` → 5185 s |
 | 11 Normalise resource/interface | ✅ | `poll_system`, `poll_interfaces` + `FakeApi` (reads fixtures); 24 tests. Live on TWR-A/TWR-B: clean output, `lo` mac None, TWR-B ether2 (L3) running False |
-| 12 Rates | ⬜ | |
+| 12 Rates | ✅ | `RateCalculator`: None on first/missing/reset/gap/dt<=0; 7 tests. Live (ping 1400 B @0.2 s via CORE): ether1 rx ≈58 kbit/s (requests in from LAN), ether2 rx ≈52 kbit/s (replies from TWR-A) |
 | 13 fping | ⬜ | |
 | 14 Config | ⬜ | |
 | 15 Runner | ⬜ | |
