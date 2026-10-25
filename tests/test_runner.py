@@ -136,6 +136,43 @@ def test_poll_cycle_polls_all_devices_concurrently():
     assert all(r["status"] == "ok" for r in out)
 
 
+def test_session_renewed_after_max_age():
+    connects, clock = [], Clock()
+
+    def fake_connect(**kw):
+        connects.append(clock.t)
+        return GrowingApi()
+
+    d = Device("core", "h")
+    p = Poller(make_cfg(d), connect=fake_connect, clock=clock, session_max_age_s=3600)
+    p.poll(d)
+    clock.t = 1800.0
+    p.poll(d)
+    assert connects == [0.0]                             # still young: reused
+    clock.t = 3700.0
+    p.poll(d)
+    assert connects == [0.0, 3700.0]                     # too old: fresh login
+
+
+def test_renewal_surfaces_changed_password():
+    """Lab finding: RouterOS keeps old sessions after a password change; only a new login fails."""
+    clock, logins = Clock(), {"n": 0}
+
+    def connect(**kw):
+        logins["n"] += 1
+        if logins["n"] > 1:
+            raise TrapError("invalid user name or password (6)")
+        return GrowingApi()
+
+    d = Device("core", "h")
+    p = Poller(make_cfg(d), connect=connect, clock=clock, session_max_age_s=3600)
+    assert p.poll(d)["status"] == "ok"
+    clock.t = 600.0
+    assert p.poll(d)["status"] == "ok"                   # old session hides the change
+    clock.t = 4000.0
+    assert p.poll(d)["status"] == "auth_failed"          # renewal reveals it
+
+
 # ---------- ping ----------
 
 def test_ping_cycle(monkeypatch):

@@ -20,6 +20,10 @@ from .ping import run_ping
 from .rates import RateCalculator
 from .routeros import poll_interfaces, poll_system
 
+# RouterOS keeps an API session alive after the user's password changes, so a reused session
+# hides credential problems until the next reconnect. Log in afresh this often (seconds).
+SESSION_MAX_AGE_S = 6 * 3600
+
 LOST = {"sent": 0, "recv": 0, "rtt_min_ms": None, "rtt_avg_ms": None, "rtt_max_ms": None}
 
 # (raw counter, output field, multiplier): bytes become bits, the rest stay per-second
@@ -65,22 +69,31 @@ async def ping_cycle(cfg: Config) -> list[dict]:
 # ---------- API polling ----------
 
 class Poller:
-    """Polls RouterOS devices. One persistent API session per device, dropped on any error."""
+    """Polls RouterOS devices. One persistent API session per device, dropped on any error
+    and renewed after session_max_age_s."""
 
-    def __init__(self, cfg: Config, connect=ros_connect, clock=time.monotonic):
+    def __init__(self, cfg: Config, connect=ros_connect, clock=time.monotonic,
+                 session_max_age_s: float = SESSION_MAX_AGE_S):
         self.cfg = cfg
         self.connect = connect            # injectable so tests can pass a fake
         self.clock = clock                # injectable so tests control time
+        self.session_max_age_s = session_max_age_s
         self.sessions: dict[str, object] = {}
+        self.session_born: dict[str, float] = {}
         self.rates = RateCalculator(max_gap_s=3 * cfg.fast_s)
 
     def _session(self, d: Device):
+        now = self.clock()
+        if d.id in self.sessions and now - self.session_born[d.id] > self.session_max_age_s:
+            self._drop(d)                  # periodic fresh login surfaces changed passwords
         if d.id not in self.sessions:
             self.sessions[d.id] = self.connect(host=d.host, port=d.api_port, username=self.cfg.username,
                                                password=self.cfg.password, timeout=5)
+            self.session_born[d.id] = now
         return self.sessions[d.id]
 
     def _drop(self, d: Device) -> None:
+        self.session_born.pop(d.id, None)
         api = self.sessions.pop(d.id, None)
         if api is not None:
             try:

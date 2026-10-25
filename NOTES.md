@@ -183,11 +183,31 @@ Lessons:
 - `disabled=true` (someone switched it off) vs `disabled=false, running=false` (cable/radio failure) → WISPMap can tell **admin action** from **fault**. Treat admin-disabled links as maintenance, not outage.
 - Latency barely changed (TWR-B 0.5–0.9 ms on either path) → path changes can't be detected from RTT in a LAN-speed lab.
 
-### Wrong password on TWR-B (user-run) — result unclear
+### Wrong password on TWR-B (user-run) — confirmed via the router's own log
 
-- No `auth_failed` appeared: every TWR-B poll 08:54:54–09:00:54 was `ok`, and a fresh login at the end works.
-- Likely explanation (to verify): **RouterOS does not end existing API sessions when a password changes**, and the collector reuses its session → a password change stays invisible until the next reconnect (collector restart, network blip). After an outage the device would then stay "API dead" with `auth_failed`, which looks like a lingering fault.
-- If confirmed → design: force a fresh login periodically (e.g. every 6 h, with the inventory poll) so credential problems surface within hours, not at the next outage.
+TWR-B `/log` (readable by `wispmon`, times UTC):
+
+```
+08:54:56  user wispmon logged in from 192.168.1.50 via api          ← collector session starts
+08:59:26  user wispmon changed by console:admin@tty1                 ← password set wrong
+          (collector poll at 09:00:54 still "ok" — same session)
+09:01:20  user wispmon changed by console:admin@tty1                 ← restored
+--- retest ---
+09:04:54  user wispmon logged in from 192.168.1.50 via api          ← collector restarted
+09:05:31  user wispmon changed by console:admin@tty1                 ← password set wrong
+09:05:47  user wispmon logged out from 192.168.1.50 via api         ← collector stopped
+09:05:51  login failure for user wispmon from 192.168.1.50 via api  ← fresh login FAILS (system,error,critical)
+09:06:10  user wispmon changed by console:admin@tty1                 ← restored
+```
+
+- **Confirmed: RouterOS keeps existing API sessions alive after a password change.** Only a new login fails.
+- **Fix (done):** `Poller` renews every session after `SESSION_MAX_AGE_S` (6 h) → a changed password shows up as `auth_failed` within hours, not at the next outage. Tests: `test_session_renewed_after_max_age`, `test_renewal_surfaces_changed_password` (67 total).
+
+### Bonus: /log is a goldmine (feature candidates)
+
+- Config changes are logged **with who and what**: `device changed by console:admin@tty1 (/interface set ether2 disabled=yes)` → WISPMap can show "who changed what, when" next to an outage (change correlation / audit trail).
+- `login failure for user … (system,error,critical)` → security alert for brute force / wrong credentials.
+- `wispmon` (read policy) can read `/log` → no extra rights needed. Poll it incrementally (only new entries).
 
 ### Other observations
 
@@ -222,7 +242,7 @@ Lessons:
 | 13 fping | ✅ | `build_fping_cmd`, `parse_fping`, async `run_ping` (+`FpingError` on exit ≥3); 8 tests incl. 1 `@lab`. Live: 4 hosts in 1.5 s; RTT grows per hop: CORE 0.22 ms, TWR-A 0.52, TWR-B 0.74; .99 recv 0 |
 | 14 Config | ✅ | `devices.toml` (3 CHRs + ping-only LAN gateway) + `.env`; `load_config` validates kind/keys/dupes/creds → `ConfigError`; password `repr=False`; 11 tests (50 total). Live: all 4 reachable, uptimes ~100 s after lab restart |
 | 15 Runner | ✅ | `runner.py`: `ping_cycle`, `Poller` (injectable connect/clock), `poll_cycle`, drift-free `every()`, `collector_error` events; `main()` with config errors + Ctrl+C; 14 tests (64 total). Live 70 s: 12 ping + 6 poll lines, all ok |
-| 16 Break things | 🟡 | Done by Hermes (VirtualBox): L1 cable cut/restore, TWR-A power-cycle. Found + fixed: collector ignored SIGINT/SIGTERM when backgrounded → signal handlers in `run()` (65 tests). User-run: L3 failover ✅ (seamless, only interface state shows it). Password change: no `auth_failed` seen → verify session-survives-password-change |
+| 16 Break things | ✅ | L1 cut, TWR-A power-cycle (Hermes); L3 failover + password change (user). Fixed: graceful SIGINT/SIGTERM shutdown; periodic session renewal (6 h). 67 tests. **M0 complete** |
 
 ## Open questions
 
