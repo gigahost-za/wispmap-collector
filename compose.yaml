@@ -1,0 +1,26 @@
+# WISPMap collector. Put this file and your .env in one folder on a machine inside your network, then:
+#   docker compose up -d        start (and on every boot)
+#   docker compose logs -f      watch it
+#   docker compose pull && docker compose up -d     update
+name: wispmap-collector
+
+services:
+  collector:
+    image: ghcr.io/gigahost-za/wispmap-collector:${COLLECTOR_TAG:-latest}
+    build: .                        # used only when you build from a source checkout (docker compose build)
+    restart: unless-stopped
+    env_file: .env                  # WISPMAP_URL, WISPMAP_TOKEN, WISPMON_USER, WISPMON_PASSWORD
+    hostname: ${COLLECTOR_HOSTNAME:-wispmap-collector}   # shown on the server's Collectors page
+    volumes:
+      - collector-data:/data        # buffer of unsent results + last config: survives restarts/updates
+    stop_grace_period: 20s          # time to write unsent results to the buffer
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+    # Default bridge networking works: the collector only makes outgoing connections (RouterOS API 8728,
+    # ICMP, HTTPS to the server). If your routers only accept API logins from this machine's own address,
+    # use the host's network instead:
+    # network_mode: host
+
+volumes:
+  collector-data:

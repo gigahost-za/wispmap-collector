@@ -1,0 +1,19 @@
+# Secrets and runtime state never go into an image.
+.env
+.env.*
+!.env.example
+data/
+devices.toml
+
+# Not needed to build
+.venv/
+.git/
+.github/
+.pytest_cache/
+.vscode/
+**/__pycache__/
+**/*.pyc
+tests/
+docs/
+NOTES.md
+compose.yaml

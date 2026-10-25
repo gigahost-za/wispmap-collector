@@ -308,3 +308,31 @@ The collector process (started in a terminal) also stopped at 10:44:11; restarte
 - Fixtures `tests/fixtures/chr/{routing_ospf_interface,routing_ospf_neighbor,ip_route}.json` from CHR-CORE 7.23.8.
   Disabled interfaces don't appear in /routing/ospf/interface (their template cost does, in interface-template).
 - 108 tests.
+
+
+## Packaging (Part 10a)
+
+- `Dockerfile`: multi-stage. The uv 0.13.5 image runs `uv sync --frozen --no-dev --no-editable` into `/app/.venv`,
+  then the runtime is `python:3.12-slim-trixie` with fping, user `wispmap` (uid 10001), `WORKDIR /data`,
+  `VOLUME /data` (buffer.sqlite3 + config.json via `WISPMAP_BUFFER_DIR=/data`), and an exec-form ENTRYPOINT so
+  the collector is PID 1 and gets SIGTERM. 185 MB. Only the installed package is in the image (no source, tests or .env).
+- fping works as non-root without extra capabilities: Docker's default `net.ipv4.ping_group_range` allows
+  unprivileged ICMP.
+- `compose.yaml`: image `ghcr.io/gigahost-za/wispmap-collector:${COLLECTOR_TAG:-latest}` (+ `build: .`),
+  `env_file: .env`, named volume `collector-data`, `restart: unless-stopped`, `stop_grace_period: 20s`, `hostname`
+  (shown on the server), json-file log rotation 10m×3. Default bridge networking: the collector only makes outgoing connections.
+- `.dockerignore` keeps `.env`, `data/`, `devices.toml`, `.git/` and tests out. `tests/test_packaging.py` checks
+  this, plus non-root, exec entrypoint, `--frozen`, and that the uv versions agree with the workflow.
+- `.github/workflows/image.yml`: tests, then a buildx build for amd64+arm64 (QEMU). A `v*` tag pushes to ghcr.io
+  (`0.2.0`, `0.2`, `latest`, `sha-…`). **Not yet run.** The first tag push is the real test, and the package then
+  has to be made public on GitHub (Packages → Package settings → Change visibility).
+- Version 0.2.0 (routing). README written as the install guide.
+- Pitfalls:
+  - In a container, `WISPMAP_URL=http://127.0.0.1:8000` is the container itself. The lab `.env` now uses
+    `http://192.168.1.50:8000`.
+  - `pgrep -f`/`pkill -f` on the host also see container processes. The pattern `bin/wispmap-collector$` matches
+    `/app/.venv/bin/wispmap-collector` inside the container. The old venv collector is matched as ` \.venv/bin/…`.
+- Live check: the lab collector runs in the container. The server shows 0.2.0 and host `wispmap-collector`, with routing
+  data arriving. `docker compose restart` stops it in 0.45 s, the unsent batch is kept in the volume and sent after
+  the restart. 30 s of samples from the swap remain in the old `data/buffer.sqlite3` (gitignored, harmless).
+- 113 tests.
