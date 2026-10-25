@@ -130,6 +130,14 @@ Spec references: `wispmap/docs/03-collector-protocol.md` (§7 RouterOS adapter),
 
 - ✅ `wispmon` is read-only: `set` on /system/identity → `TrapError: not enough permissions (9)`.
 
+## Runner observations (Step 15)
+
+- First poll per device ≈ 145 ms (TCP connect + login), later polls ≈ 5 ms → persistent sessions matter (×30).
+- First poll cycle: all rates `null` (no previous reading); second cycle has numbers.
+- `ping_only` LAN gateway pinged every 30 s, never polled.
+- Spec change candidates: PollResult status `unreachable` (EHOSTUNREACH/ENETUNREACH) added to the spec list; new line type `collector_error` for failures of the loop itself (e.g. `FpingError`).
+- `asyncio.to_thread` uses the default thread pool (min(32, CPUs+4)); fine for the lab, revisit for 500+ devices (doc 03 §7 says 50 workers).
+
 ## Design decisions from observations
 
 1. Normalise MACs to lowercase with colons everywhere (link matching depends on it).
@@ -150,7 +158,7 @@ Spec references: `wispmap/docs/03-collector-protocol.md` (§7 RouterOS adapter),
 | 12 Rates | ✅ | `RateCalculator`: None on first/missing/reset/gap/dt<=0; 7 tests. Live (ping 1400 B @0.2 s via CORE): ether1 rx ≈58 kbit/s (requests in from LAN), ether2 rx ≈52 kbit/s (replies from TWR-A) |
 | 13 fping | ✅ | `build_fping_cmd`, `parse_fping`, async `run_ping` (+`FpingError` on exit ≥3); 8 tests incl. 1 `@lab`. Live: 4 hosts in 1.5 s; RTT grows per hop: CORE 0.22 ms, TWR-A 0.52, TWR-B 0.74; .99 recv 0 |
 | 14 Config | ✅ | `devices.toml` (3 CHRs + ping-only LAN gateway) + `.env`; `load_config` validates kind/keys/dupes/creds → `ConfigError`; password `repr=False`; 11 tests (50 total). Live: all 4 reachable, uptimes ~100 s after lab restart |
-| 15 Runner | ⬜ | |
+| 15 Runner | ✅ | `runner.py`: `ping_cycle`, `Poller` (injectable connect/clock), `poll_cycle`, drift-free `every()`, `collector_error` events; `main()` with config errors + Ctrl+C; 14 tests (64 total). Live 70 s: 12 ping + 6 poll lines, all ok |
 | 16 Break things | ⬜ | |
 
 ## Open questions
