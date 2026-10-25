@@ -138,6 +138,49 @@ Spec references: `wispmap/docs/03-collector-protocol.md` (§7 RouterOS adapter),
 - Spec change candidates: PollResult status `unreachable` (EHOSTUNREACH/ENETUNREACH) added to the spec list; new line type `collector_error` for failures of the loop itself (e.g. `FpingError`).
 - `asyncio.to_thread` uses the default thread pool (min(32, CPUs+4)); fine for the lab, revisit for 500+ devices (doc 03 §7 says 50 workers).
 
+## Failure scenarios (Step 16, run 2026-10-25 07:48–07:56 UTC)
+
+### L1 cut (CHR-CORE ether2 cable unplugged 07:49:56 → restored 07:52:27, 151 s)
+
+| Signal | What the collector saw |
+|---|---|
+| Ping | TWR-A **and** TWR-B `recv 0` from 07:50:21 (first cycle after the cut, +25 s) to 07:52:22 → 5 lost cycles ≈ 150 s ✔ |
+| Poll, 1st cycle | `timeout` after 5008 ms (existing session, command timed out) |
+| Poll, later | `unreachable` after ~3 s (`[Errno 113] No route to host`: CORE's OSPF route gone → ICMP unreachable) |
+| CHR-CORE itself | stayed `ok`; **ether2 `running=false`, `link_downs` 0 → 1** |
+| Recovery | ping back 07:52:52 (+25 s); poll 07:53:22 `ok` 143 ms = automatic reconnect + new login |
+
+Lessons:
+- Same outage shows up as `timeout` then `unreachable` → alerting must treat timeout/unreachable/refused as one "API not reachable" class; ping + topology decide up/down.
+- TWR-A and TWR-B look identical from the collector → root cause needs topology (reflection Q1).
+- **The surviving end of a link reports it:** CORE ether2 `running=false` + `link_downs` +1 names the broken link directly. Strong root-cause signal → use in Part 8.
+- Detection latency = up to one ping interval (30 s) + spec DOWN_AFTER (3 cycles) ≈ 90–120 s before an outage incident.
+
+### TWR-A power-cycle (hard reset 07:54:07)
+
+| Signal | What the collector saw |
+|---|---|
+| Ping | TWR-A **and** TWR-B lost for one cycle only (07:54:22); back 07:54:52 — CHR boots in < 45 s |
+| Poll | 07:54:22 `timeout`; 07:55:22 `ok` with **uptime 70** (was 5028) → reboot detectable |
+| Rates | TWR-A `rx_bps` null on the first poll after reboot (counter reset handled), numbers again next poll |
+| Counters | TWR-A `link_downs` back to 0 (counters reset at boot) |
+
+Lessons:
+- With DOWN_AFTER = 3 ping cycles, this 30 s blip raises **no outage incident**, only a `device_rebooted` event (uptime decreased) — flap control working as designed.
+- Reboot detection must compare uptime between polls, not rely on ping.
+
+### Other observations
+
+- Single latency spike at 07:56:22 (TWR-B 12.85 ms, gateway 7.17 ms, normally < 1 ms) = VM/host jitter → "degraded" must use averages over several cycles (spec: 5 cycles), never one sample.
+- **Shutdown bug (fixed):** processes started in the background by a non-interactive shell inherit SIGINT = ignored, and SIGTERM (what `docker stop` sends) had no handler → collector could not be stopped cleanly. Fix: `loop.add_signal_handler` for SIGINT + SIGTERM → cancel main task → close sessions. Verified: SIGINT to python and SIGTERM via `uv run` both exit with "stopping".
+
+### Reflection answers
+
+1. **Root cause in the L1 cut:** both towers silent, but CORE is up and its ether2 went `running=false` → the break is the CORE–TWR-A link; TWR-B is "unreachable behind it". Topology (TWR-B is only reachable via TWR-A) + the surviving end's interface state give this without guessing.
+2. **Timed-out polls hold threads:** each dead device holds a worker for 5 s (≈3 s when ICMP unreachable comes back). 500 devices / 50 threads with a region down → poll cycle stretches. Options: skip API polls for devices whose last ping cycle was 0/3, shorter connect timeout, bigger pool.
+3. **Why rates on the collector:** it has the previous sample and the monotonic clock; buffering/replay later would make server-side deltas wrong; reboot resets are detected at the source.
+4. **Alert on L2/L3 after failover?** Operators want to know a backup path is carrying traffic (capacity risk), but not at outage severity → `link_down` major/warning, outage only when something is unreachable.
+
 ## Design decisions from observations
 
 1. Normalise MACs to lowercase with colons everywhere (link matching depends on it).
@@ -159,7 +202,7 @@ Spec references: `wispmap/docs/03-collector-protocol.md` (§7 RouterOS adapter),
 | 13 fping | ✅ | `build_fping_cmd`, `parse_fping`, async `run_ping` (+`FpingError` on exit ≥3); 8 tests incl. 1 `@lab`. Live: 4 hosts in 1.5 s; RTT grows per hop: CORE 0.22 ms, TWR-A 0.52, TWR-B 0.74; .99 recv 0 |
 | 14 Config | ✅ | `devices.toml` (3 CHRs + ping-only LAN gateway) + `.env`; `load_config` validates kind/keys/dupes/creds → `ConfigError`; password `repr=False`; 11 tests (50 total). Live: all 4 reachable, uptimes ~100 s after lab restart |
 | 15 Runner | ✅ | `runner.py`: `ping_cycle`, `Poller` (injectable connect/clock), `poll_cycle`, drift-free `every()`, `collector_error` events; `main()` with config errors + Ctrl+C; 14 tests (64 total). Live 70 s: 12 ping + 6 poll lines, all ok |
-| 16 Break things | ⬜ | |
+| 16 Break things | 🟡 | Done by Hermes (VirtualBox): L1 cable cut/restore, TWR-A power-cycle. Found + fixed: collector ignored SIGINT/SIGTERM when backgrounded → signal handlers in `run()` (65 tests). To do (needs admin on CHRs): L3 failover, password change |
 
 ## Open questions
 

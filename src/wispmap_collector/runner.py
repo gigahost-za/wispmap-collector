@@ -7,6 +7,7 @@ Human-readable messages go to stderr so stdout stays machine-readable.
 import asyncio
 import errno
 import json
+import signal
 import sys
 import time
 from datetime import datetime, timezone
@@ -140,10 +141,22 @@ async def run(cfg: Config) -> None:
     polled = [d for d in cfg.devices if d.poll]
     print(f"wispmap-collector: {len(cfg.devices)} devices ({len(polled)} polled), "
           f"ping every {cfg.ping_s}s, poll every {cfg.fast_s}s", file=sys.stderr)
+
+    # Stop cleanly on Ctrl+C (SIGINT) and `docker stop` / systemd (SIGTERM).
+    # Registering explicitly also works when the shell started us with SIGINT ignored.
+    loop = asyncio.get_running_loop()
+    main_task = asyncio.current_task()
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        loop.add_signal_handler(sig, main_task.cancel)
+
     try:
         await asyncio.gather(
             every(cfg.ping_s, lambda: ping_cycle(cfg)),
             every(cfg.fast_s, lambda: poll_cycle(poller, polled)),
         )
+    except asyncio.CancelledError:
+        print("wispmap-collector: stopping", file=sys.stderr)
     finally:
         poller.close()
+        for sig in (signal.SIGINT, signal.SIGTERM):
+            loop.remove_signal_handler(sig)
