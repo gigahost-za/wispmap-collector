@@ -1,7 +1,7 @@
-"""Collector configuration: device list (devices.toml) + credentials (.env).
+"""Collector configuration: device list + credentials (.env).
 
-devices.toml stands in for the server's `GET /config` response (spec doc 03 §4),
-so the rest of the collector won't change when the server takes over.
+Server mode gets the device list from the server's `GET /config` (see sync.py).
+Local mode (no WISPMAP_URL/WISPMAP_TOKEN, or --local) reads it from devices.toml.
 """
 import os
 import tomllib
@@ -25,6 +25,9 @@ class Device:
     api_port: int = 8728
     ping: bool = True
     poll: bool = True
+    name: str = ""
+    api_tls: bool = False
+    credential_profile: str = "default"
 
     def __post_init__(self):
         if self.kind not in KINDS:
@@ -40,6 +43,15 @@ class Config:
     username: str
     password: str = field(repr=False)    # never shows up in print()/logs
     devices: list[Device] = field(default_factory=list)
+    push_s: int = 30                     # how often the uplink sends a batch (server mode)
+
+
+def load_credentials() -> tuple[str, str]:
+    """The 'default' credential profile: the RouterOS monitoring user from .env (never sent to the server)."""
+    try:
+        return os.environ["WISPMON_USER"], os.environ["WISPMON_PASSWORD"]
+    except KeyError as missing:
+        raise ConfigError(f"{missing.args[0]} is not set (put it in .env)") from None
 
 
 def load_config(path: str | Path = "devices.toml", env_file: str | Path = ".env") -> Config:
@@ -47,11 +59,7 @@ def load_config(path: str | Path = "devices.toml", env_file: str | Path = ".env"
     with open(path, "rb") as f:          # tomllib wants bytes
         raw = tomllib.load(f)
 
-    try:
-        username = os.environ["WISPMON_USER"]
-        password = os.environ["WISPMON_PASSWORD"]
-    except KeyError as missing:
-        raise ConfigError(f"{missing.args[0]} is not set (put it in {env_file})") from None
+    username, password = load_credentials()
 
     devices = []
     for d in raw.get("devices", []):

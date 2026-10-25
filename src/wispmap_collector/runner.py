@@ -80,9 +80,12 @@ class Poller:
         self.session_max_age_s = session_max_age_s
         self.sessions: dict[str, object] = {}
         self.session_born: dict[str, float] = {}
+        self.session_addr: dict[str, tuple] = {}   # (host, port) each session was opened to
         self.rates = RateCalculator(max_gap_s=3 * cfg.fast_s)
 
     def _session(self, d: Device):
+        if d.credential_profile != "default":      # only one local profile so far (spec doc 03 §2)
+            raise LookupError(f"unknown credential profile {d.credential_profile!r}")
         now = self.clock()
         if d.id in self.sessions and now - self.session_born[d.id] > self.session_max_age_s:
             self._drop(d)                  # periodic fresh login surfaces changed passwords
@@ -90,11 +93,16 @@ class Poller:
             self.sessions[d.id] = self.connect(host=d.host, port=d.api_port, username=self.cfg.username,
                                                password=self.cfg.password, timeout=5)
             self.session_born[d.id] = now
+            self.session_addr[d.id] = (d.host, d.api_port)
         return self.sessions[d.id]
 
     def _drop(self, d: Device) -> None:
-        self.session_born.pop(d.id, None)
-        api = self.sessions.pop(d.id, None)
+        self._drop_id(d.id)
+
+    def _drop_id(self, dev_id: str) -> None:
+        self.session_born.pop(dev_id, None)
+        self.session_addr.pop(dev_id, None)
+        api = self.sessions.pop(dev_id, None)
         if api is not None:
             try:
                 api.close()
@@ -102,8 +110,15 @@ class Poller:
                 pass                       # the connection is already broken; nothing to save
 
     def close(self) -> None:
-        for d in self.cfg.devices:
-            self._drop(d)
+        for dev_id in list(self.sessions):
+            self._drop_id(dev_id)
+
+    def sync(self, devices: list[Device]) -> None:
+        """After a config reload: close sessions of devices that are gone or whose address changed."""
+        wanted = {d.id: (d.host, d.api_port) for d in devices}
+        for dev_id in list(self.sessions):
+            if self.session_addr.get(dev_id) != wanted.get(dev_id):
+                self._drop_id(dev_id)
 
     def poll(self, d: Device) -> dict:
         ts, t0 = now_iso(), self.clock()
@@ -131,25 +146,31 @@ class Poller:
 
 
 async def poll_cycle(poller: Poller, devices: list[Device]) -> list[dict]:
+    poller.sync(devices)
     # librouteros blocks, so each device is polled in a worker thread; gather runs them concurrently
     return list(await asyncio.gather(*(asyncio.to_thread(poller.poll, d) for d in devices)))
 
 
 # ---------- loops ----------
 
-async def every(interval_s: float, cycle) -> None:
-    """Run `cycle()` every interval_s seconds without drifting; never let one failure stop the loop."""
+async def every(interval_s, cycle, sink=None) -> None:
+    """Run `cycle()` every interval_s seconds without drifting; never let one failure stop the loop.
+    interval_s may be a function, so a config reload can change it. Results go to sink (default: stdout)."""
+    sink = sink or emit
     while True:
         started = time.monotonic()
         try:
             for result in await cycle():
-                emit(result)
+                sink(result)
         except Exception as exc:
-            emit({"type": "collector_error", "ts": now_iso(), "error": f"{type(exc).__name__}: {exc}"})
-        await asyncio.sleep(max(0.0, interval_s - (time.monotonic() - started)))
+            sink({"type": "collector_error", "ts": now_iso(), "error": f"{type(exc).__name__}: {exc}"})
+        interval = interval_s() if callable(interval_s) else interval_s
+        await asyncio.sleep(max(0.0, interval - (time.monotonic() - started)))
 
 
-async def run(cfg: Config) -> None:
+async def run(cfg: Config, sink=None, background=()) -> None:
+    """Ping + poll loops (and any background coroutines, e.g. the uplink) until SIGINT/SIGTERM.
+    Device lists and intervals are read from cfg on every cycle, so config reloads apply live."""
     poller = Poller(cfg)
     polled = [d for d in cfg.devices if d.poll]
     print(f"wispmap-collector: {len(cfg.devices)} devices ({len(polled)} polled), "
@@ -164,8 +185,9 @@ async def run(cfg: Config) -> None:
 
     try:
         await asyncio.gather(
-            every(cfg.ping_s, lambda: ping_cycle(cfg)),
-            every(cfg.fast_s, lambda: poll_cycle(poller, polled)),
+            every(lambda: cfg.ping_s, lambda: ping_cycle(cfg), sink),
+            every(lambda: cfg.fast_s, lambda: poll_cycle(poller, [d for d in cfg.devices if d.poll]), sink),
+            *background,
         )
     except asyncio.CancelledError:
         print("wispmap-collector: stopping", file=sys.stderr)

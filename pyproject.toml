@@ -8,8 +8,10 @@ authors = [
 ]
 requires-python = ">=3.12"
 dependencies = [
+    "httpx>=0.28.1",
     "librouteros>=4.2.2",
     "python-dotenv>=1.2.4",
+    "uuid6>=2025.0.1",
 ]
 
 [project.scripts]

@@ -248,3 +248,34 @@ TWR-B `/log` (readable by `wispmon`, times UTC):
 
 - ~~Does any LAN device announce itself on CHR-CORE `ether1`?~~ Yes — router + Windows host via LLDP (see /ip/neighbor).
 - v6 behaviour of everything above — needs a v6 CHR or fixtures from a real v6 device.
+
+## Server mode (Part 5b)
+
+Run: `uv run wispmap-collector`. Server mode when `.env` has `WISPMAP_URL` + `WISPMAP_TOKEN`;
+otherwise (or with `--local`) devices come from `devices.toml` and results print as JSON lines.
+State lives in `WISPMAP_BUFFER_DIR` (default `./data`, git-ignored): `buffer.sqlite3` + `config.json`.
+
+| Module | Job |
+|---|---|
+| `sync.py` | `POST /hello` at start + every 6 h (clock-skew warning > 30 s); `GET /config` every 60 s with ETag, or at once when an ingest reply shows a new `config_version`; caches the last good config |
+| `uplink.py` | collects results, one gzipped batch per `push_s` → **disk first**, then sends: newest batch first, backlog oldest-first ≤ 1/s |
+| `buffer.py` | SQLite queue (WAL, autocommit); caps 48 h / 200 MB, oldest dropped and counted |
+| `server.py` | httpx client; token never in `repr` |
+
+Status handling: 2xx/409 delete · 413 split in half · 400/422 drop (poison) · 401/403/426 pause 5 min · 429/5xx/network backoff 2 s → 5 min with jitter. Always keeps buffering.
+
+Config reloads apply live: loops read `cfg.devices` / intervals every cycle; `Poller.sync()` closes sessions of removed devices or changed addresses. Only credential profile `default` exists so far (others → poll `error`).
+
+### E2E (2026-10-25 10:23–10:25 UTC, intervals 10/20/10 s, separate server on :8001)
+
+| Check | Result |
+|---|---|
+| Server down 46 s | collector logged "server unreachable" once, **4 batches buffered** |
+| Recovery | "server reachable again; 5 batch(es) still queued"; **6 batches arrived within 10 s** |
+| Data | 14 ping samples per CHR, **max gap 10 s**, 4 taken during the outage, **0 duplicates**; polls 8/8 ok |
+| Live config change | LAN gateway ping disabled 10:25:04 → collector fetched v11, last ping 10:25:03 |
+| SIGTERM | "stopping"; unsent tail (1 batch) left on disk for next start |
+
+### Shell pitfall (test scripts)
+- `( cd X && nohup prog & echo $! )` → `&` backgrounds the whole `cd && nohup` list, so `$!` is a **subshell** PID, not prog's. Killing it does nothing. Use `cd X; nohup prog & echo $!` (simple command), or find servers by socket: `ss -ltnpH "sport = :8001"`.
+- `pkill -f "<pattern>"` over SSH also matches the SSH command line containing the pattern → kills your own shell.
