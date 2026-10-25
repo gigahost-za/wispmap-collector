@@ -1,0 +1,27 @@
+# Local stand-in for the server's GET /config (spec doc 03 §4).
+# No secrets in here: credentials live in .env.
+
+[intervals]
+ping_s = 30     # fping cycle
+fast_s = 60     # RouterOS API poll cycle
+
+[[devices]]
+id = "chr-core"
+host = "10.255.255.1"
+kind = "routeros"
+
+[[devices]]
+id = "chr-twr-a"
+host = "10.255.255.2"
+kind = "routeros"
+
+[[devices]]
+id = "chr-twr-b"
+host = "10.255.255.3"
+kind = "routeros"
+
+# Example of a non-MikroTik device: shown on the map from ping only.
+[[devices]]
+id = "lan-gateway"
+host = "192.168.1.254"
+kind = "ping_only"

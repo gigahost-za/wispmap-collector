@@ -149,7 +149,7 @@ Spec references: `wispmap/docs/03-collector-protocol.md` (§7 RouterOS adapter),
 | 11 Normalise resource/interface | ✅ | `poll_system`, `poll_interfaces` + `FakeApi` (reads fixtures); 24 tests. Live on TWR-A/TWR-B: clean output, `lo` mac None, TWR-B ether2 (L3) running False |
 | 12 Rates | ✅ | `RateCalculator`: None on first/missing/reset/gap/dt<=0; 7 tests. Live (ping 1400 B @0.2 s via CORE): ether1 rx ≈58 kbit/s (requests in from LAN), ether2 rx ≈52 kbit/s (replies from TWR-A) |
 | 13 fping | ✅ | `build_fping_cmd`, `parse_fping`, async `run_ping` (+`FpingError` on exit ≥3); 8 tests incl. 1 `@lab`. Live: 4 hosts in 1.5 s; RTT grows per hop: CORE 0.22 ms, TWR-A 0.52, TWR-B 0.74; .99 recv 0 |
-| 14 Config | ⬜ | |
+| 14 Config | ✅ | `devices.toml` (3 CHRs + ping-only LAN gateway) + `.env`; `load_config` validates kind/keys/dupes/creds → `ConfigError`; password `repr=False`; 11 tests (50 total). Live: all 4 reachable, uptimes ~100 s after lab restart |
 | 15 Runner | ⬜ | |
 | 16 Break things | ⬜ | |
 
