@@ -33,6 +33,7 @@ class Uplink:
         self.started = clock()
         self.ping: list[dict] = []
         self.polls: list[dict] = []
+        self.neighbors: list[dict] = []
         self.backoff_s = 0.0
         self.retry_at = 0.0               # don't send before this (monotonic) time
         self.problem: str | None = None   # current failure, logged once instead of every cycle
@@ -48,6 +49,8 @@ class Uplink:
             self.ping.append(sample)
         elif kind == "poll":
             self.polls.append(sample)
+        elif kind == "neighbors":
+            self.neighbors.append(sample)
         else:                              # e.g. collector_error from a loop: log it, don't send it
             log(f"{kind}: {sample.get('error', sample)}")
 
@@ -55,19 +58,21 @@ class Uplink:
         return {"version": VERSION, "uptime_s": int(self.clock() - self.started),
                 "queue_depth": self.buffer.depth(), "dropped_batches": self.buffer.dropped}
 
-    def _encode(self, ping: list, polls: list) -> tuple[str, bytes]:
+    def _encode(self, ping: list, polls: list, neighbors: list | None = None) -> tuple[str, bytes]:
         batch_id = str(uuid7())
         batch = {"schema": 1, "batch_id": batch_id, "sent_at": now_iso(),
                  "collector": self.stats(), "ping": ping, "polls": polls}
+        if neighbors:
+            batch["neighbors"] = neighbors
         return batch_id, gzip.compress(json.dumps(batch).encode())
 
     def flush(self) -> str | None:
         """Turn everything collected so far into one batch on disk. Returns its batch_id (None if empty)."""
-        if not (self.ping or self.polls):
+        if not (self.ping or self.polls or self.neighbors):
             return None
-        batch_id, body = self._encode(self.ping, self.polls)
+        batch_id, body = self._encode(self.ping, self.polls, self.neighbors)
         self.buffer.put(batch_id, body)
-        self.ping, self.polls = [], []
+        self.ping, self.polls, self.neighbors = [], [], []
         dropped = self.buffer.enforce_caps()
         if dropped:
             log(f"buffer full: dropped {dropped} oldest batch(es)")
@@ -126,7 +131,8 @@ class Uplink:
 
     def _split(self, item: Item) -> None:
         data = json.loads(gzip.decompress(item.body))
-        samples = [("ping", s) for s in data["ping"]] + [("polls", s) for s in data["polls"]]
+        samples = ([("ping", s) for s in data["ping"]] + [("polls", s) for s in data["polls"]]
+                   + [("neighbors", s) for s in data.get("neighbors", [])])
         self.buffer.delete(item.id)
         if len(samples) <= 1:
             self.rejected += 1
@@ -134,7 +140,8 @@ class Uplink:
             return
         half = len(samples) // 2
         for part in (samples[:half], samples[half:]):
-            batch_id, body = self._encode([s for k, s in part if k == "ping"], [s for k, s in part if k == "polls"])
+            batch_id, body = self._encode([s for k, s in part if k == "ping"], [s for k, s in part if k == "polls"],
+                                          [s for k, s in part if k == "neighbors"])
             self.buffer.put(batch_id, body, created=item.created)       # keeps its age for the 48 h cap
         log(f"batch {item.batch_id} too large (HTTP 413): split into two")
 

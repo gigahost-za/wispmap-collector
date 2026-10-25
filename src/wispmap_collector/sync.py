@@ -49,6 +49,7 @@ class ConfigSync:
         self.cfg.ping_s = intervals.get("ping_s", self.cfg.ping_s)
         self.cfg.fast_s = intervals.get("fast_s", self.cfg.fast_s)
         self.cfg.push_s = intervals.get("push_s", self.cfg.push_s)
+        self.cfg.neighbors_s = intervals.get("neighbors_s", self.cfg.neighbors_s)
         self.cfg.devices = devices        # swap the whole list: the loops pick it up on their next cycle
         self.version = body.get("config_version")
         polled = sum(d.poll for d in devices)

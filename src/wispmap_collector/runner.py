@@ -9,7 +9,9 @@ import errno
 import json
 import signal
 import sys
+import threading
 import time
+from collections import defaultdict
 from datetime import datetime, timezone
 
 from librouteros import connect as ros_connect
@@ -18,7 +20,7 @@ from librouteros.exceptions import MultiTrapError, TrapError
 from .config import Config, Device
 from .ping import run_ping
 from .rates import RateCalculator
-from .routeros import poll_interfaces, poll_system
+from .routeros import poll_interfaces, poll_neighbors, poll_system
 
 # RouterOS keeps an API session alive after the user's password changes, so a reused session
 # hides credential problems until the next reconnect. Log in afresh this often (seconds).
@@ -81,6 +83,8 @@ class Poller:
         self.sessions: dict[str, object] = {}
         self.session_born: dict[str, float] = {}
         self.session_addr: dict[str, tuple] = {}   # (host, port) each session was opened to
+        # one API session per device, used by one thread at a time (poll and neighbor cycles can overlap)
+        self.locks: defaultdict[str, threading.Lock] = defaultdict(threading.Lock)
         self.rates = RateCalculator(max_gap_s=3 * cfg.fast_s)
 
     def _session(self, d: Device):
@@ -120,7 +124,21 @@ class Poller:
             if self.session_addr.get(dev_id) != wanted.get(dev_id):
                 self._drop_id(dev_id)
 
+    def poll_neighbors(self, d: Device) -> dict | None:
+        """Neighbor table of one device, or None if it can't be read (the next cycle tries again)."""
+        with self.locks[d.id]:
+            try:
+                neighbors = poll_neighbors(self._session(d))
+            except Exception:
+                self._drop(d)
+                return None
+        return {"type": "neighbors", "device_id": d.id, "ts": now_iso(), "neighbors": neighbors}
+
     def poll(self, d: Device) -> dict:
+        with self.locks[d.id]:
+            return self._poll(d)
+
+    def _poll(self, d: Device) -> dict:
         ts, t0 = now_iso(), self.clock()
         base = {"type": "poll", "device_id": d.id, "ts": ts, "cadence": "fast"}
         try:
@@ -149,6 +167,11 @@ async def poll_cycle(poller: Poller, devices: list[Device]) -> list[dict]:
     poller.sync(devices)
     # librouteros blocks, so each device is polled in a worker thread; gather runs them concurrently
     return list(await asyncio.gather(*(asyncio.to_thread(poller.poll, d) for d in devices)))
+
+
+async def neighbor_cycle(poller: Poller, devices: list[Device]) -> list[dict]:
+    results = await asyncio.gather(*(asyncio.to_thread(poller.poll_neighbors, d) for d in devices))
+    return [r for r in results if r is not None]
 
 
 # ---------- loops ----------
@@ -187,6 +210,7 @@ async def run(cfg: Config, sink=None, background=()) -> None:
         await asyncio.gather(
             every(lambda: cfg.ping_s, lambda: ping_cycle(cfg), sink),
             every(lambda: cfg.fast_s, lambda: poll_cycle(poller, [d for d in cfg.devices if d.poll]), sink),
+            every(lambda: cfg.neighbors_s, lambda: neighbor_cycle(poller, [d for d in cfg.devices if d.poll]), sink),
             *background,
         )
     except asyncio.CancelledError:

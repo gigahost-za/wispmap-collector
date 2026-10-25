@@ -279,3 +279,17 @@ Config reloads apply live: loops read `cfg.devices` / intervals every cycle; `Po
 ### Shell pitfall (test scripts)
 - `( cd X && nohup prog & echo $! )` → `&` backgrounds the whole `cd && nohup` list, so `$!` is a **subshell** PID, not prog's. Killing it does nothing. Use `cd X; nohup prog & echo $!` (simple command), or find servers by socket: `ss -ltnpH "sport = :8001"`.
 - `pkill -f "<pattern>"` over SSH also matches the SSH command line containing the pattern → kills your own shell.
+
+### One-way OSPF stall (2026-10-25, seen by Part 6 live status)
+
+| UTC | Router log |
+|---|---|
+| 10:32:13 | TWR-A: `admin` mac-telnet session (from CORE) logged out |
+| 10:32:15–20 | TWR-A: `ether1 link down` → `link up` (5 s bounce on L1) |
+| 10:32:30 | TWR-A: neighbor CORE back to **Full** |
+| 10:32:51 | CORE: neighbor TWR-A **timeout → Down**, stayed Down (TWR-A still thought Full) |
+| 10:32:40 → 10:43 | collector: TWR-A + TWR-B 100 % ping loss, polls `unreachable`; map red "no ping reply (3+ cycles)" |
+| 10:43:33–46 | TWR-A's adjacencies to TWR-B and CORE reset and re-formed; all green again |
+
+Lessons: a short link flap can leave OSPF half-up for minutes. Cable `running=true` on both ends, MNDP neighbor visible and the L1 /30 pingable while the loopbacks behind it are unreachable = routing problem, not a physical one. Worth a future rule: "interface running, neighbor seen, but OSPF neighbor not Full".
+The collector process (started in a terminal) also stopped at 10:44:11; restarted detached with output in `data/collector.log`.
