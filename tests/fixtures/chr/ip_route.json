@@ -1,0 +1,56 @@
+[
+ {
+  ".id": "*1",
+  "dst-address": "10.255.255.1/32",
+  "gateway": "lo",
+  "immediate-gw": "lo",
+  "active": true,
+  "connect": true
+ },
+ {
+  ".id": "*2",
+  "dst-address": "10.0.1.0/30",
+  "gateway": "ether2",
+  "immediate-gw": "ether2",
+  "active": true,
+  "connect": true
+ },
+ {
+  ".id": "*3",
+  "dst-address": "10.0.1.0/30",
+  "gateway": "10.0.1.2%ether2",
+  "immediate-gw": "10.0.1.2%ether2",
+  "ospf": true
+ },
+ {
+  ".id": "*4",
+  "dst-address": "10.0.2.0/30",
+  "gateway": "10.0.1.2%ether2",
+  "immediate-gw": "10.0.1.2%ether2",
+  "active": true,
+  "ospf": true
+ },
+ {
+  ".id": "*5",
+  "dst-address": "10.255.255.2/32",
+  "gateway": "10.0.1.2%ether2",
+  "immediate-gw": "10.0.1.2%ether2",
+  "active": true,
+  "ospf": true
+ },
+ {
+  ".id": "*6",
+  "dst-address": "10.255.255.3/32",
+  "gateway": "10.0.1.2%ether2",
+  "immediate-gw": "10.0.1.2%ether2",
+  "active": true,
+  "ospf": true
+ },
+ {
+  ".id": "*7",
+  "dst-address": "0.0.0.0/0",
+  "gateway": "192.168.1.1",
+  "immediate-gw": "",
+  "static": true
+ }
+]

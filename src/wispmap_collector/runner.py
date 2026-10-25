@@ -21,6 +21,7 @@ from .config import Config, Device
 from .ping import run_ping
 from .rates import RateCalculator
 from .routeros import poll_interfaces, poll_neighbors, poll_system
+from .routing import poll_routing
 
 # RouterOS keeps an API session alive after the user's password changes, so a reused session
 # hides credential problems until the next reconnect. Log in afresh this often (seconds).
@@ -149,11 +150,24 @@ class Poller:
             self._drop(d)
             return {**base, "status": classify(exc), "error": str(exc) or type(exc).__name__,
                     "duration_ms": int((self.clock() - t0) * 1000)}
+        routing = self._routing(d, api)
         now = self.clock()
         return {**base, "status": "ok", "error": None,
                 "duration_ms": int((now - t0) * 1000),
                 "system": system,
-                "interfaces": [self._with_rates(d, i, now) for i in raw_ifs]}
+                "interfaces": [self._with_rates(d, i, now) for i in raw_ifs],
+                "routing": routing}
+
+    def _routing(self, d: Device, api) -> dict | None:
+        """OSPF state, or None if this router can't tell us (no routing menu, no permission, read failed).
+        Never fails the poll: ping/system/interfaces are still good data."""
+        try:
+            return poll_routing(api)
+        except (TrapError, MultiTrapError):
+            return None                    # menu missing / not allowed: the session itself is fine
+        except Exception:
+            self._drop(d)                  # timeout or broken connection: reconnect next cycle
+            return None
 
     def _with_rates(self, d: Device, i: dict, now: float) -> dict:
         out = {k: i[k] for k in ("name", "type", "mac", "running", "disabled", "link_downs")}

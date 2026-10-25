@@ -1,0 +1,31 @@
+[
+ {
+  ".id": "*1",
+  "interface": "lo",
+  "cost": 1,
+  "state": "passive",
+  "type": "broadcast",
+  "dynamic": true,
+  "area": "backbone",
+  "passive": true
+ },
+ {
+  ".id": "*2",
+  "interface": "ether1",
+  "cost": 1,
+  "state": "passive",
+  "type": "broadcast",
+  "dynamic": true,
+  "area": "backbone",
+  "passive": true
+ },
+ {
+  ".id": "*3",
+  "interface": "ether2",
+  "cost": 1,
+  "state": "ptp",
+  "type": "ptp",
+  "dynamic": true,
+  "area": "backbone"
+ }
+]

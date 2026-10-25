@@ -293,3 +293,18 @@ Config reloads apply live: loops read `cfg.devices` / intervals every cycle; `Po
 
 Lessons: a short link flap can leave OSPF half-up for minutes. Cable `running=true` on both ends, MNDP neighbor visible and the L1 /30 pingable while the loopbacks behind it are unreachable = routing problem, not a physical one. Worth a future rule: "interface running, neighbor seen, but OSPF neighbor not Full".
 The collector process (started in a terminal) also stopped at 10:44:11; restarted detached with output in `data/collector.log`.
+
+
+## Routing (OSPF) polling (Part 11)
+
+- `src/wispmap_collector/routing.py` `poll_routing(api)`, called from the fast poll on the same session:
+  `/routing/ospf/interface` (interface, cost, state, passive), `/routing/ospf/neighbor` (interface, address,
+  router-id, state lower-cased, state-changes, adjacency → seconds), and active OSPF routes counted per outgoing
+  interface (`immediate-gw` "10.0.1.2%ether2"; v6 `gateway-status` "… reachable via ether2").
+- The route read is a server-side filtered query (`select(...).where(active, ospf)`): 3 ms on the lab CORE, and a
+  router with a full BGP table never sends it. Counting stops at 50 000 routes.
+- Poll result gains `"routing"`; None when the router can't tell (no menu / not allowed → TrapError, session kept)
+  or the read failed (timeout → session dropped). A routing problem never fails the poll.
+- Fixtures `tests/fixtures/chr/{routing_ospf_interface,routing_ospf_neighbor,ip_route}.json` from CHR-CORE 7.23.8.
+  Disabled interfaces don't appear in /routing/ospf/interface (their template cost does, in interface-template).
+- 108 tests.
