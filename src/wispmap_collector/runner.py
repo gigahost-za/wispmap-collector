@@ -7,15 +7,17 @@ Human-readable messages go to stderr so stdout stays machine-readable.
 import asyncio
 import errno
 import json
+import os
 import signal
 import sys
 import threading
 import time
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 
 from librouteros import connect as ros_connect
-from librouteros.exceptions import MultiTrapError, TrapError
+from librouteros.exceptions import ConnectionClosed, MultiTrapError, TrapError
 
 from .config import Config, Device
 from .ping import run_ping
@@ -26,6 +28,79 @@ from .routing import poll_routing
 # RouterOS keeps an API session alive after the user's password changes, so a reused session
 # hides credential problems until the next reconnect. Log in afresh this often (seconds).
 SESSION_MAX_AGE_S = 6 * 3600
+
+# librouteros blocks, so every device poll runs in a thread. Python's default pool has only cpu+4 threads (8 on a
+# 4-core box): a hung router holds one for the 5-s timeout, a slow one for ~10 s, and 35 bad routers out of 337
+# took the poll cycle from 3 s to 32-47 s (tools/scale_test.py). Waiting threads cost almost nothing, so use many.
+POLL_THREADS = 64
+
+
+def poll_workers() -> int:
+    """Poll threads: WISPMAP_POLL_THREADS (1-512), default POLL_THREADS."""
+    try:
+        n = int(os.environ.get("WISPMAP_POLL_THREADS", POLL_THREADS))
+    except ValueError:
+        n = POLL_THREADS
+    return max(1, min(n, 512))
+
+
+class BufferedTransport:
+    """librouteros reads a word's length and then its body with separate recv() calls: ~570 per poll. Each call
+    releases and re-takes Python's interpreter lock, and with 64 poll threads that hand-off cost more CPU than the
+    polling itself. Read up to 64 KB at a time and cut words from memory instead (an offset, not deleting from the
+    front, so a 2,000-route reply stays linear)."""
+
+    CHUNK = 65536
+
+    def __init__(self, sock):
+        self.sock = sock
+        self.buf = b""
+        self.pos = 0
+
+    def read(self, length: int) -> bytes:
+        while len(self.buf) - self.pos < length:
+            chunk = self.sock.recv(self.CHUNK)          # the socket timeout (5 s) still applies to every recv
+            if not chunk:
+                raise ConnectionClosed("Connection unexpectedly closed.")
+            self.buf = self.buf[self.pos:] + chunk
+            self.pos = 0
+        out = self.buf[self.pos:self.pos + length]
+        self.pos += length
+        return out
+
+    def write(self, data: bytes) -> None:
+        self.sock.sendall(data)
+
+    def close(self) -> None:
+        self.sock.close()
+
+
+def connect_buffered(**kwargs):
+    """librouteros.connect, then buffered reads for the rest of the session (login itself is a few words)."""
+    api = ros_connect(**kwargs)
+    transport = getattr(getattr(api, "protocol", None), "transport", None)
+    if transport is not None and hasattr(transport, "sock"):
+        api.protocol.transport = BufferedTransport(transport.sock)
+    return api
+
+
+OPEN_FILES = 65536
+
+
+def raise_open_files(want: int = OPEN_FILES) -> int:
+    """Every router keeps an API session open: one socket each. The usual soft limit of 1,024 open files (also inside
+    Docker) ran out at ~1,000 routers ("Too many open files"). Raise the soft limit towards the hard one (524,288 on
+    Ubuntu and in Docker). Returns the soft limit now in force, -1 if it can't be read (not Linux)."""
+    try:
+        import resource
+        soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+        target = want if hard == resource.RLIM_INFINITY else min(want, hard)
+        if soft != resource.RLIM_INFINITY and soft < target:
+            resource.setrlimit(resource.RLIMIT_NOFILE, (target, hard))
+        return resource.getrlimit(resource.RLIMIT_NOFILE)[0]
+    except (ImportError, ValueError, OSError):
+        return -1
+
 
 LOST = {"sent": 0, "recv": 0, "rtt_min_ms": None, "rtt_avg_ms": None, "rtt_max_ms": None}
 
@@ -75,7 +150,7 @@ class Poller:
     """Polls RouterOS devices. One persistent API session per device, dropped on any error
     and renewed after session_max_age_s."""
 
-    def __init__(self, cfg: Config, connect=ros_connect, clock=time.monotonic,
+    def __init__(self, cfg: Config, connect=connect_buffered, clock=time.monotonic,
                  session_max_age_s: float = SESSION_MAX_AGE_S):
         self.cfg = cfg
         self.connect = connect            # injectable so tests can pass a fake
@@ -87,6 +162,7 @@ class Poller:
         # one API session per device, used by one thread at a time (poll and neighbor cycles can overlap)
         self.locks: defaultdict[str, threading.Lock] = defaultdict(threading.Lock)
         self.rates = RateCalculator(max_gap_s=3 * cfg.fast_s)
+        self.pool = ThreadPoolExecutor(max_workers=poll_workers(), thread_name_prefix="poll")
 
     def _session(self, d: Device):
         if d.credential_profile != "default":      # only one local profile so far (spec doc 03 §2)
@@ -117,6 +193,7 @@ class Poller:
     def close(self) -> None:
         for dev_id in list(self.sessions):
             self._drop_id(dev_id)
+        self.pool.shutdown(wait=False, cancel_futures=True)
 
     def sync(self, devices: list[Device]) -> None:
         """After a config reload: close sessions of devices that are gone or whose address changed."""
@@ -177,14 +254,20 @@ class Poller:
         return out
 
 
+def _in_threads(poller, fn, devices):
+    """Run fn(device) for every device in the poller's own thread pool (librouteros blocks)."""
+    loop = asyncio.get_running_loop()
+    pool = getattr(poller, "pool", None)               # None: the default pool (test doubles without one)
+    return asyncio.gather(*(loop.run_in_executor(pool, fn, d) for d in devices))
+
+
 async def poll_cycle(poller: Poller, devices: list[Device]) -> list[dict]:
     poller.sync(devices)
-    # librouteros blocks, so each device is polled in a worker thread; gather runs them concurrently
-    return list(await asyncio.gather(*(asyncio.to_thread(poller.poll, d) for d in devices)))
+    return list(await _in_threads(poller, poller.poll, devices))
 
 
 async def neighbor_cycle(poller: Poller, devices: list[Device]) -> list[dict]:
-    results = await asyncio.gather(*(asyncio.to_thread(poller.poll_neighbors, d) for d in devices))
+    results = await _in_threads(poller, poller.poll_neighbors, devices)
     return [r for r in results if r is not None]
 
 
@@ -208,10 +291,12 @@ async def every(interval_s, cycle, sink=None) -> None:
 async def run(cfg: Config, sink=None, background=()) -> None:
     """Ping + poll loops (and any background coroutines, e.g. the uplink) until SIGINT/SIGTERM.
     Device lists and intervals are read from cfg on every cycle, so config reloads apply live."""
+    open_files = raise_open_files()
     poller = Poller(cfg)
     polled = [d for d in cfg.devices if d.poll]
     print(f"wispmap-collector: {len(cfg.devices)} devices ({len(polled)} polled), "
-          f"ping every {cfg.ping_s}s, poll every {cfg.fast_s}s", file=sys.stderr)
+          f"ping every {cfg.ping_s}s, poll every {cfg.fast_s}s, {poll_workers()} poll threads, "
+          f"open files {open_files}", file=sys.stderr)
 
     # Stop cleanly on Ctrl+C (SIGINT) and `docker stop` / systemd (SIGTERM).
     # Registering explicitly also works when the shell started us with SIGINT ignored.

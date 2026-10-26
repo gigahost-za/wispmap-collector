@@ -6,12 +6,15 @@ class FpingError(RuntimeError):
     """fping itself failed (bad arguments, missing binary, no permission)."""
 
 
-def build_fping_cmd(hosts, count: int, interval_ms: int, timeout_ms: int) -> list[str]:
+def build_fping_cmd(hosts, count: int, interval_ms: int, timeout_ms: int, spacing_ms: int = 1) -> list[str]:
     # -C n : send n pings per host and print every RTT (lost ones as "-")
     # -p ms: gap between pings to the same host
     # -t ms: how long to wait for each reply
+    # -i ms: gap between any two pings. fping's default 10 ms made a round grow with the host count (500 hosts:
+    #        28 s, close to the 30-s ping interval); 1 ms: 5 s. Allowed without root (checked in the container).
     # -q   : quiet, only the per-host summary lines
-    return ["fping", "-C", str(count), "-p", str(interval_ms), "-t", str(timeout_ms), "-q", *hosts]
+    return ["fping", "-C", str(count), "-p", str(interval_ms), "-t", str(timeout_ms), "-i", str(spacing_ms),
+            "-q", *hosts]
 
 
 def parse_fping(output: str) -> dict[str, dict]:

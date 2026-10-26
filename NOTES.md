@@ -336,3 +336,28 @@ The collector process (started in a terminal) also stopped at 10:44:11; restarte
   data arriving. `docker compose restart` stops it in 0.45 s, the unsent batch is kept in the volume and sent after
   the restart. 30 s of samples from the swap remain in the old `data/buffer.sqlite3` (gitignored, harmless).
 - 113 tests.
+
+## Scale (Phase B.2, 2026-10-26)
+
+- `tools/fakeros.py`: a fake RouterOS API server. Hundreds of routers in one process on 127.x.y.z (all of 127/8 is
+  loopback, so no setup). The second octet picks the behaviour: 21 normal, 22 slow (1-3 s per reply), 23 hung,
+  24 drops the connection, 25 core router with 2,000 OSPF routes. A port nobody listens on = refused.
+  `--latency-ms` simulates radio hops.
+- `tools/scale_test.py`: the real Poller, poll/neighbour cycles and fping against it. It reports wall time, CPU,
+  peak threads, statuses and RSS per cycle.
+- Found and fixed (4-CPU VM):
+
+  | Problem | Cause | Fix |
+  |---|---|---|
+  | 337 routers with 35 bad ones: 32-47 s per poll cycle (healthy alone: 3 s) | Python's default pool = cpu+4 = 8 threads; a hung router holds one for 5 s | own `ThreadPoolExecutor`, 64 threads (`WISPMAP_POLL_THREADS`, 1-512) → 17-19 s |
+  | ~1,000 routers: crash "Too many open files" | one socket per router, soft limit 1,024 (host and Docker) | `raise_open_files()` at start (soft → 65,536, capped by hard) + compose `ulimits.nofile` |
+  | 28-31 s CPU per cycle at 1,000 routers with 64 threads | librouteros does ~570 `recv()` per poll; every one hands off the GIL | `BufferedTransport` (64 KB reads, words cut by offset) via `connect_buffered` → 3.7-6 s CPU |
+  | fping 500 hosts: 28 s (ping interval 30 s) | fping's default 10 ms between any two pings | `-i 1` → 5 s; fine non-root in the container |
+
+- Result: 1,115 routers (1,000 healthy at 10 ms latency, 50 slow, 30 hung, 20 refused, 10 dropping, 5 core) poll in
+  **17 s** per cycle, about 5 s CPU, 79 MB RSS; fping 1,215 hosts in 16 s. The poll interval is 60 s, so one
+  collector on a small box handles about 1,000 routers. Past that, more threads or a second collector.
+- Tests: `tests/test_scale.py` (the real librouteros client against fakeros, slow routers in parallel, thread setting,
+  open-files, buffered reads). 122 tests.
+- Later: the cycle is still bounded by the slowest router (each cycle waits for the 5-s timeouts). Polling each
+  device on its own schedule would decouple them; not needed below ~1,000 routers.

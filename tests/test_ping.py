@@ -16,7 +16,7 @@ SAMPLE = """10.255.255.1  : 0.251 0.223 0.274
 
 def test_build_cmd():
     assert build_fping_cmd(["a", "b"], count=3, interval_ms=200, timeout_ms=1000) == \
-        ["fping", "-C", "3", "-p", "200", "-t", "1000", "-q", "a", "b"]
+        ["fping", "-C", "3", "-p", "200", "-t", "1000", "-i", "1", "-q", "a", "b"]
 
 
 def test_parse_all_hosts_found():
