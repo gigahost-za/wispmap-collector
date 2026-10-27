@@ -14,12 +14,14 @@ port. The second octet decides how the router behaves:
 and without latency every collector thread is busy at once, which overstates the collector's CPU.
 
 Counters grow with time, so the collector computes real rates. Answers only what the collector asks:
-/login, /system/resource, /interface, /ip/neighbor, /routing/ospf/interface|neighbor, /ip/route.
+/login, /system/resource, /system/health, /interface, /ip/neighbor, /routing/ospf/interface|neighbor,
+/ip/route. Health is in the RouterOS 7 shape (a row per sensor) as the manual describes it, not a capture.
 
     python tools/fakeros.py --port 18728          # Ctrl+C to stop
 """
 import argparse
 import asyncio
+import math
 import random
 import signal
 import time
@@ -92,6 +94,8 @@ class Router:
         self.bps = {n: r.uniform(0.1e6, 80e6) for n, _ in self.ifaces}
         self.mac = [r.randrange(256) for _ in range(4)]
         n_routes = 2000 if self.kind == 25 else 20
+        self.volts = r.choice([13.6, 27.3, 54.6])        # battery bank on float: 12 / 24 / 48 V
+        self.temp = r.randint(28, 45)
         self.routes = [{"dst-address": f"10.{i // 250}.{i % 250}.0/24", "gateway": "10.0.1.2",
                         "immediate-gw": f"10.0.1.2%ether{1 + i % 2}", "active": True, "ospf": True}
                        for i in range(n_routes)]
@@ -105,6 +109,12 @@ class Router:
         if cmd == "/system/resource/print":
             return [{"uptime": self.uptime(), "cpu-load": self.rng.randint(1, 40), "free-memory": 700_000_000,
                      "total-memory": 1_073_741_824, "version": "7.16.2 (stable)", "board-name": "RB4011iGS+"}]
+        if cmd == "/system/health/print":
+            wave = math.sin(time.time() / 600)               # slow drift, like a day's heat and charging
+            return [{"name": "voltage", "value": f"{self.volts + 0.1 * wave:.1f}", "type": "V"},
+                    {"name": "temperature", "value": str(round(self.temp + 3 * wave)), "type": "C"},
+                    {"name": "cpu-temperature", "value": str(round(self.temp + 12 + 4 * wave)), "type": "C"},
+                    {"name": "psu1-state", "value": "ok", "type": ""}]
         if cmd == "/interface/print":
             out = []
             for k, (name, typ) in enumerate(self.ifaces):

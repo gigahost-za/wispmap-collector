@@ -1,0 +1,15 @@
+[
+ {
+  "voltage": "24.1",
+  "current": 182,
+  "temperature": 35,
+  "cpu-temperature": 47,
+  "power-consumption": "4.3",
+  "psu1-state": "ok",
+  "psu2-state": "ok",
+  "fan1-speed": 4560,
+  "fan-mode": "auto",
+  "use-fan": "main",
+  "active-fan": "main"
+ }
+]

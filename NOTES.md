@@ -384,3 +384,17 @@ The collector process (started in a terminal) also stopped at 10:44:11; restarte
   collector on the same machine (another folder, another `.env`) replaced the first container and shared its
   buffer volume. Existing installs from the guide live in a folder called `wispmap-collector`, so their project
   and volume names don't change. No image change: compose.yaml is fetched from `main`.
+
+## Health (0.4.0, 2026-10-27)
+
+- `health.py`: `/system/health` read on every fast poll (same failure rule as routing: a trap -> None, the poll
+  is still ok). Normalised to `voltage_v`, `temperature_c` (board: temperature / board-temperature1 /
+  switch-temperature), `cpu_temp_c`, `power_w`, `states` (psuN, fan… from `*-state`) and `fans` (RPM).
+  Fahrenheit (`type` F) converted; out-of-range values dropped; None when nothing usable.
+- **Real CHR answer** (7.23.8, captured 2026-10-27): `[{"state": "disabled", "state-after-reboot": "enabled"}]`.
+  Not empty as assumed earlier: it's the health *settings*. `/system/routerboard` and `/interface/ethernet/poe`
+  answer "no such command (prefix)".
+- v7 and v6 sensor fixtures (`tests/fixtures/docs-v7`, `docs-v6`) are written from the manual, **not
+  captured**. Replace them with `--capture` output from real RouterBOARDs (owner is getting one).
+- `--capture HOST`: read-only JSON of resource, health, routerboard, interface, PoE and packages; serials,
+  licence ids, MACs and addresses replaced.

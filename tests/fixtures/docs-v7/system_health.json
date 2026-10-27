@@ -1,0 +1,50 @@
+[
+ {
+  ".id": "*D",
+  "name": "voltage",
+  "value": "24.3",
+  "type": "V"
+ },
+ {
+  ".id": "*E",
+  "name": "temperature",
+  "value": 38,
+  "type": "C"
+ },
+ {
+  ".id": "*F",
+  "name": "cpu-temperature",
+  "value": 51,
+  "type": "C"
+ },
+ {
+  ".id": "*10",
+  "name": "psu1-state",
+  "value": "ok",
+  "type": ""
+ },
+ {
+  ".id": "*11",
+  "name": "psu2-state",
+  "value": "fail",
+  "type": ""
+ },
+ {
+  ".id": "*12",
+  "name": "fan1-speed",
+  "value": 5340,
+  "type": "RPM"
+ },
+ {
+  ".id": "*13",
+  "name": "fan2-speed",
+  "value": 0,
+  "type": "RPM"
+ },
+ {
+  ".id": "*14",
+  "name": "power-consumption",
+  "value": "18.4",
+  "type": "W"
+ }
+]

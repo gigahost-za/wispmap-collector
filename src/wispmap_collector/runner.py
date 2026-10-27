@@ -22,6 +22,7 @@ from librouteros.exceptions import ConnectionClosed, MultiTrapError, TrapError
 from .config import Config, Device
 from .ping import run_ping
 from .rates import RateCalculator
+from .health import poll_health
 from .routeros import poll_interfaces, poll_neighbors, poll_system
 from .routing import poll_routing
 
@@ -228,12 +229,25 @@ class Poller:
             return {**base, "status": classify(exc), "error": str(exc) or type(exc).__name__,
                     "duration_ms": int((self.clock() - t0) * 1000)}
         routing = self._routing(d, api)
+        health = self._health(d, api)
         now = self.clock()
         return {**base, "status": "ok", "error": None,
                 "duration_ms": int((now - t0) * 1000),
                 "system": system,
                 "interfaces": [self._with_rates(d, i, now) for i in raw_ifs],
-                "routing": routing}
+                "routing": routing,
+                "health": health}
+
+    def _health(self, d: Device, api) -> dict | None:
+        """Voltage, temperatures, PSU/fans, or None if this router has no sensors or can't tell us.
+        Like routing, never fails the poll."""
+        try:
+            return poll_health(api)
+        except (TrapError, MultiTrapError):
+            return None                    # menu missing / not allowed
+        except Exception:
+            self._drop(d)
+            return None
 
     def _routing(self, d: Device, api) -> dict | None:
         """OSPF state, or None if this router can't tell us (no routing menu, no permission, read failed).

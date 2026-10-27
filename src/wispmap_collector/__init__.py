@@ -17,6 +17,13 @@ from .runner import run
 
 def main() -> None:
     load_dotenv(".env")
+    if "--capture" in sys.argv[1:]:                  # read-only dump of a router's API answers (fixtures)
+        from .capture import main as capture
+        hosts = [a for a in sys.argv[1:] if not a.startswith("--")]
+        if not hosts:
+            print("usage: wispmap-collector --capture HOST [HOST ...]", file=sys.stderr)
+            sys.exit(2)
+        sys.exit(capture(hosts))
     local = "--local" in sys.argv[1:] or not (os.environ.get("WISPMAP_URL") and os.environ.get("WISPMAP_TOKEN"))
     try:
         coro = run_local() if local else run_server()

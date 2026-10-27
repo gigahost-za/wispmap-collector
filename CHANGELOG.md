@@ -3,6 +3,15 @@
 Images: `ghcr.io/gigahost-za/wispmap-collector:<version>` for linux/amd64 and linux/arm64.
 Update with `docker compose pull && docker compose up -d`.
 
+## 0.4.0 (unreleased)
+
+- Reads `/system/health` on every poll: input voltage, board and CPU temperature, power draw, PSU and fan state.
+  Works with both RouterOS 7 (a row per sensor) and RouterOS 6 (one row of fields); routers without sensors
+  (CHR, x86) simply send none. Needs WISPMap with health support; older servers ignore it.
+- `wispmap-collector --capture HOST`: prints what a router's API returns for the menus WISPMap reads (read-only,
+  serial numbers removed), to share for support or test data:
+  `docker compose run --rm collector wispmap-collector --capture 10.0.0.1 > router.json`
+
 ## 0.3.0 (2026-10-27)
 
 Built for big networks: one collector on 4 vCPU polls about 1,000 routers a minute.
