@@ -377,3 +377,10 @@ The collector process (started in a terminal) also stopped at 10:44:11; restarte
   `curl -s "https://ghcr.io/token?scope=repository:gigahost-za/wispmap-collector:pull"` gives a token, then
   `curl -s -H "Authorization: Bearer <token>" -H "Accept: application/vnd.oci.image.index.v1+json"
   https://ghcr.io/v2/gigahost-za/wispmap-collector/manifests/0.3.0` lists both platforms.
+
+## compose.yaml without a fixed project name (2026-10-27)
+
+- `name: wispmap-collector` is gone: Docker names the project after the folder. With the fixed name, a second
+  collector on the same machine (another folder, another `.env`) replaced the first container and shared its
+  buffer volume. Existing installs from the guide live in a folder called `wispmap-collector`, so their project
+  and volume names don't change. No image change: compose.yaml is fetched from `main`.

@@ -2,7 +2,8 @@
 #   docker compose up -d        start (and on every boot)
 #   docker compose logs -f      watch it
 #   docker compose pull && docker compose up -d     update
-name: wispmap-collector
+# The Docker project name is this folder's name (wispmap-collector in the guide): a second collector on the same
+# machine just needs its own folder. (A fixed name here made a second one replace the first and share its buffer.)
 
 services:
   collector:
