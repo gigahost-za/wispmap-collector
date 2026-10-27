@@ -1,6 +1,6 @@
 [project]
 name = "wispmap-collector"
-version = "0.2.0"
+version = "0.3.0"
 description = "WISPMap collector: pings and polls MikroTik devices inside a WISP network"
 readme = "README.md"
 authors = [

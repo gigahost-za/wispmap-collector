@@ -361,3 +361,19 @@ The collector process (started in a terminal) also stopped at 10:44:11; restarte
   open-files, buffered reads). 122 tests.
 - Later: the cycle is still bounded by the slowest router (each cycle waits for the 5-s timeouts). Polling each
   device on its own schedule would decouple them; not needed below ~1,000 routers.
+
+## Release 0.3.0 (2026-10-27)
+
+- v0.2.0 was tagged before the scale work, so the scale fixes ship as **0.3.0** (version in `pyproject.toml`,
+  notes in `CHANGELOG.md`). The image reports the package version (`importlib.metadata`) to the server in
+  `X-Wispmap-Collector`; the server marks older collectors "update available"
+  (`WISPMAP_COLLECTOR_LATEST` on the server: bump it with every release).
+- Releasing: commit + push `main`, then `git tag -a vX.Y.Z -m "..."` and `git push origin vX.Y.Z` (only that
+  tag, not `--tags`). `.github/workflows/image.yml` tests, builds amd64 + arm64 and pushes
+  `ghcr.io/gigahost-za/wispmap-collector:X.Y.Z`, `:X.Y` and `:latest`.
+- The repository and the ghcr.io package must both be **public**: the README's install steps download
+  `compose.yaml` from raw.githubusercontent.com, and installs pull the image without logging in.
+- Check a release without logging in:
+  `curl -s "https://ghcr.io/token?scope=repository:gigahost-za/wispmap-collector:pull"` gives a token, then
+  `curl -s -H "Authorization: Bearer <token>" -H "Accept: application/vnd.oci.image.index.v1+json"
+  https://ghcr.io/v2/gigahost-za/wispmap-collector/manifests/0.3.0` lists both platforms.

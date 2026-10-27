@@ -31,7 +31,9 @@ a Raspberry Pi 4/5.
    ```
    Within a minute, the collector shows **online** on WISPMap's Collectors page.
 
-Update with `docker compose pull && docker compose up -d`. To pin a version, set `COLLECTOR_TAG=0.2.0` in `.env`.
+Update with `docker compose pull && docker compose up -d`; WISPMap's Collectors page says when a newer release
+is out. To stay on one release line, set `COLLECTOR_TAG=0.3` in `.env` (gets 0.3.x fixes, never 0.4). What changed
+in each release: [CHANGELOG.md](CHANGELOG.md).
 Unsent results are kept in the `collector-data` volume across restarts and updates.
 
 ## Run from source (development)
