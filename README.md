@@ -13,6 +13,10 @@ devices, polls MikroTik RouterOS (v6/v7) over the API, and sends the results out
 You need a small Linux machine or VM inside the network, with Docker. Any x86-64 or ARM64 box works, including
 a Raspberry Pi 4/5.
 
+The quickest way: in WISPMap go to **Admin → Collectors → Add collector** and run the one-line command it shows
+(`curl -fsSL https://<your WISPMap>/collector/install.sh | sh -s -- <token>`). It does the steps below for you and
+asks for the router password on your terminal. To do it by hand:
+
 1. In WISPMap go to **Admin → Collectors → Add collector** and copy the token. It is shown only once.
 2. On every router, add the read-only user:
    ```
