@@ -23,6 +23,7 @@ from .config import Config, Device
 from .ping import run_ping
 from .rates import RateCalculator
 from .health import poll_health
+from .poe import poll_poe
 from .routeros import poll_interfaces, poll_neighbors, poll_system
 from .routing import poll_routing
 
@@ -230,13 +231,15 @@ class Poller:
                     "duration_ms": int((self.clock() - t0) * 1000)}
         routing = self._routing(d, api)
         health = self._health(d, api)
+        poe = self._poe(d, api)
         now = self.clock()
         return {**base, "status": "ok", "error": None,
                 "duration_ms": int((now - t0) * 1000),
                 "system": system,
                 "interfaces": [self._with_rates(d, i, now) for i in raw_ifs],
                 "routing": routing,
-                "health": health}
+                "health": health,
+                "poe": poe}
 
     def _health(self, d: Device, api) -> dict | None:
         """Voltage, temperatures, PSU/fans, or None if this router has no sensors or can't tell us.
@@ -245,6 +248,16 @@ class Poller:
             return poll_health(api)
         except (TrapError, MultiTrapError):
             return None                    # menu missing / not allowed
+        except Exception:
+            self._drop(d)
+            return None
+
+    def _poe(self, d: Device, api) -> list | None:
+        """PoE-out ports, or None if this router has none (no menu) or can't tell us. Never fails the poll."""
+        try:
+            return poll_poe(api)
+        except (TrapError, MultiTrapError):
+            return None                    # no PoE-out on this board / not allowed
         except Exception:
             self._drop(d)
             return None

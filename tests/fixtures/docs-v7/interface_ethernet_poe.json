@@ -1,0 +1,7 @@
+[
+  {".id": "*2", "name": "ether2", "poe-out": "auto-on", "poe-priority": 10, "poe-voltage": "auto", "power-cycle-ping-enabled": false},
+  {".id": "*3", "name": "ether3", "poe-out": "auto-on", "poe-priority": 10, "poe-voltage": "auto", "power-cycle-ping-enabled": false},
+  {".id": "*4", "name": "ether4", "poe-out": "forced-on", "poe-priority": 10, "poe-voltage": "auto", "power-cycle-ping-enabled": false},
+  {".id": "*5", "name": "ether5", "poe-out": "auto-on", "poe-priority": 10, "poe-voltage": "auto", "power-cycle-ping-enabled": false},
+  {".id": "*6", "name": "ether6", "poe-out": "off", "poe-priority": 10, "poe-voltage": "auto", "power-cycle-ping-enabled": false}
+]

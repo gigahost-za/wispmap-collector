@@ -27,6 +27,14 @@ def capture(api) -> dict:
             out[key] = scrub(list(api.path(*path)))
         except Exception as exc:  # noqa: BLE001 - "no such command" etc. is the answer: record it
             out[key] = {"error": type(exc).__name__, "message": str(exc)[:300]}
+    ports = out.get("interface_ethernet_poe")
+    if isinstance(ports, list) and ports:              # live PoE readings: monitor <ids> once (still read-only)
+        try:
+            ids = ",".join(str(p.get(".id") or p.get("name")) for p in ports)
+            out["interface_ethernet_poe_monitor"] = scrub(list(
+                api.path("interface", "ethernet", "poe")("monitor", numbers=ids, once="")))
+        except Exception as exc:  # noqa: BLE001
+            out["interface_ethernet_poe_monitor"] = {"error": type(exc).__name__, "message": str(exc)[:300]}
     return out
 
 

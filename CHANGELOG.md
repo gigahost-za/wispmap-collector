@@ -3,7 +3,16 @@
 Images: `ghcr.io/gigahost-za/wispmap-collector:<version>` for linux/amd64 and linux/arm64.
 Update with `docker compose pull && docker compose up -d`.
 
-## 0.4.0 (unreleased)
+## 0.5.0 (2026-10-31)
+
+- Reads PoE-out on every poll: per port the mode (auto-on / forced-on / off), status (powered on, waiting for
+  load, short circuit, overload, voltage too low, ...), voltage, current and power. Routers without PoE-out send
+  none. Needs WISPMap with PoE support (for "PoE fault" alerts and the device page); older servers ignore it.
+- `--capture` also records the live PoE readings (`/interface/ethernet/poe/monitor ... once`, still read-only).
+- Not yet checked on real PoE hardware: the readings are built from MikroTik's manual. Please send a `--capture`
+  of a PoE router if the numbers look wrong.
+
+## 0.4.0 (2026-10-27)
 
 - Reads `/system/health` on every poll: input voltage, board and CPU temperature, power draw, PSU and fan state.
   Works with both RouterOS 7 (a row per sensor) and RouterOS 6 (one row of fields); routers without sensors

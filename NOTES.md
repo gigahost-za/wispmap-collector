@@ -398,3 +398,18 @@ The collector process (started in a terminal) also stopped at 10:44:11; restarte
   captured**. Replace them with `--capture` output from real RouterBOARDs (owner is getting one).
 - `--capture HOST`: read-only JSON of resource, health, routerboard, interface, PoE and packages; serials,
   licence ids, MACs and addresses replaced.
+
+## PoE (0.5.0, 2026-10-31)
+
+`poe.py`: `/interface/ethernet/poe` print (ports + mode), then `monitor numbers=<.id list> once=""` for the live
+readings. Normalised: status/mode lowercase with underscores; voltage V, current mA (an "A" value x1000), power W,
+units optional ("24.1V" or 24.1); out-of-range values -> None. No menu (CHR, boards without PoE-out) ->
+TrapError -> `poe: None`; never fails the poll (same pattern as routing and health). `--capture` also records
+the monitor output.
+
+Not verified on hardware (no PoE in the CHR lab): fixtures in `tests/fixtures/docs-v7/interface_ethernet_poe*.json`
+are from the manual. Unknowns to check with the first capture: whether the API sends units, and that
+`once=""` is accepted (RouterOS API flag style).
+
+Test fake: `FakeApi.path()` is iterable (print) and callable (`monitor`, recorded in `api.calls`); a missing
+fixture raises TrapError like a router without that menu.

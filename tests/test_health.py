@@ -65,4 +65,4 @@ def test_capture_scrubs_identifiers():
     out = capture(Api("chr"))
     assert out["system_routerboard"] == [{"model": "hAP ax2", "serial-number": "<removed>", "current-firmware": "7.16"}]
     assert out["system_health"] == [{"state": "disabled", "state-after-reboot": "enabled"}]
-    assert out["interface_ethernet_poe"]["error"] == "FileNotFoundError"      # missing menu: recorded, not fatal
+    assert out["interface_ethernet_poe"]["error"] == "TrapError"      # missing menu (as on CHR): recorded, not fatal

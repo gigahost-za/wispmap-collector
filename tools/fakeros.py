@@ -14,7 +14,8 @@ port. The second octet decides how the router behaves:
 and without latency every collector thread is busy at once, which overstates the collector's CPU.
 
 Counters grow with time, so the collector computes real rates. Answers only what the collector asks:
-/login, /system/resource, /system/health, /interface, /ip/neighbor, /routing/ospf/interface|neighbor,
+/login, /system/resource, /system/health, /interface, /interface/ethernet/poe (print, monitor), /ip/neighbor,
+/routing/ospf/interface|neighbor,
 /ip/route. Health is in the RouterOS 7 shape (a row per sensor) as the manual describes it, not a capture.
 
     python tools/fakeros.py --port 18728          # Ctrl+C to stop
@@ -115,6 +116,19 @@ class Router:
                     {"name": "temperature", "value": str(round(self.temp + 3 * wave)), "type": "C"},
                     {"name": "cpu-temperature", "value": str(round(self.temp + 12 + 4 * wave)), "type": "C"},
                     {"name": "psu1-state", "value": "ok", "type": ""}]
+        if cmd == "/interface/ethernet/poe/print":
+            return [{".id": f"*{k}", "name": f"ether{k}", "poe-out": "auto-on", "poe-priority": 10} for k in (2, 3, 4)]
+        if cmd == "/interface/ethernet/poe/monitor":
+            wave = math.sin(time.time() / 300)
+            return [{"name": "ether2", "poe-out": "auto-on", "poe-out-status": "powered-on",
+                     "poe-out-voltage": f"{self.volts - 0.3:.1f}V",
+                     "poe-out-current": f"{round((6.5 + wave) / (self.volts - 0.3) * 1000)}mA",
+                     "poe-out-power": f"{6.5 + wave:.1f}W"},
+                    {"name": "ether3", "poe-out": "auto-on", "poe-out-status": "powered-on",
+                     "poe-out-voltage": f"{self.volts - 0.3:.1f}V",
+                     "poe-out-current": f"{round((8.8 + wave) / (self.volts - 0.3) * 1000)}mA",
+                     "poe-out-power": f"{8.8 + wave:.1f}W"},
+                    {"name": "ether4", "poe-out": "auto-on", "poe-out-status": "waiting-for-load"}]
         if cmd == "/interface/print":
             out = []
             for k, (name, typ) in enumerate(self.ifaces):

@@ -1,0 +1,7 @@
+[
+  {"name": "ether2", "poe-out": "auto-on", "poe-out-status": "powered-on", "poe-out-voltage": "24.1V", "poe-out-current": "254mA", "poe-out-power": "6.1W"},
+  {"name": "ether3", "poe-out": "auto-on", "poe-out-status": "short-circuit"},
+  {"name": "ether4", "poe-out": "forced-on", "poe-out-status": "powered-on", "poe-out-voltage": "23.9V", "poe-out-current": "377mA", "poe-out-power": "9.0W"},
+  {"name": "ether5", "poe-out": "auto-on", "poe-out-status": "waiting-for-load"},
+  {"name": "ether6", "poe-out": "off", "poe-out-status": "disabled"}
+]
