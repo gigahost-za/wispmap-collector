@@ -1,0 +1,23 @@
+[
+ {
+  ".id": "*1",
+  "name": "wifi1",
+  "configuration.mode": "ap",
+  "configuration.ssid": "T007-SEC-E",
+  "channel.band": "5ghz-ax",
+  "channel.width": "20/40/80mhz",
+  "channel.frequency": "5500",
+  "running": "true",
+  "disabled": "false"
+ },
+ {
+  ".id": "*2",
+  "name": "wifi2",
+  "configuration.mode": "ap",
+  "configuration.ssid": "T007-2G",
+  "channel.band": "2ghz-ax",
+  "channel.width": "20mhz",
+  "running": "false",
+  "disabled": "false"
+ }
+]

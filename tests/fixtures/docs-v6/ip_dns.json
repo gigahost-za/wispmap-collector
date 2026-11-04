@@ -1,0 +1,7 @@
+[
+ {
+  "servers": "8.8.8.8",
+  "allow-remote-requests": "true",
+  "cache-size": "2048KiB"
+ }
+]

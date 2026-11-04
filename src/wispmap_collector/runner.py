@@ -24,6 +24,9 @@ from .ping import run_ping
 from .rates import RateCalculator
 from .health import poll_health
 from .poe import poll_poe
+from .security import poll_security
+from .sessions import poll_sessions
+from .wireless import poll_wireless
 from .routeros import poll_interfaces, poll_neighbors, poll_system
 from .routing import poll_routing
 
@@ -164,6 +167,7 @@ class Poller:
         # one API session per device, used by one thread at a time (poll and neighbor cycles can overlap)
         self.locks: defaultdict[str, threading.Lock] = defaultdict(threading.Lock)
         self.rates = RateCalculator(max_gap_s=3 * cfg.fast_s)
+        self.slow_at: dict[str, float] = {}       # when each device last had its slow reads (sessions, security)
         self.pool = ThreadPoolExecutor(max_workers=poll_workers(), thread_name_prefix="poll")
 
     def _session(self, d: Device):
@@ -232,6 +236,12 @@ class Poller:
         routing = self._routing(d, api)
         health = self._health(d, api)
         poe = self._poe(d, api)
+        wireless = self._optional(d, poll_wireless, api)
+        slow = {}
+        if t0 - self.slow_at.get(d.id, float("-inf")) >= self.cfg.slow_s:   # from the first poll, then every slow_s
+            self.slow_at[d.id] = t0
+            slow = {"sessions": self._optional(d, poll_sessions, api),
+                    "security": self._optional(d, poll_security, api, self.cfg.username)}
         now = self.clock()
         return {**base, "status": "ok", "error": None,
                 "duration_ms": int((now - t0) * 1000),
@@ -239,7 +249,20 @@ class Poller:
                 "interfaces": [self._with_rates(d, i, now) for i in raw_ifs],
                 "routing": routing,
                 "health": health,
-                "poe": poe}
+                "poe": poe,
+                "wireless": wireless,
+                **slow}
+
+    def _optional(self, d: Device, read, api, *args):
+        """One of the optional reads (wireless, sessions, security): its result, or None if this router has no
+        such menu or can't tell us. Never fails the poll; a broken connection is dropped and reopened next time."""
+        try:
+            return read(api, *args)
+        except (TrapError, MultiTrapError):
+            return None
+        except Exception:
+            self._drop(d)
+            return None
 
     def _health(self, d: Device, api) -> dict | None:
         """Voltage, temperatures, PSU/fans, or None if this router has no sensors or can't tell us.

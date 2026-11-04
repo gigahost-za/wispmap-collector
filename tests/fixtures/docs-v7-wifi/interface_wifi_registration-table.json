@@ -1,0 +1,25 @@
+[
+ {
+  ".id": "*1",
+  "interface": "wifi1",
+  "ssid": "T007-SEC-E",
+  "mac-address": "D4:01:C3:00:00:01",
+  "uptime": "2h3m4s",
+  "signal": "-58",
+  "band": "5ghz-ax",
+  "tx-rate": "390Mbps-40MHz/2S",
+  "rx-rate": "360Mbps-40MHz/2S",
+  "auth-type": "wpa2-psk",
+  "last-activity": "20ms"
+ },
+ {
+  ".id": "*2",
+  "interface": "wifi1",
+  "ssid": "T007-SEC-E",
+  "mac-address": "D4:01:C3:00:00:02",
+  "uptime": "40m",
+  "signal": -74,
+  "tx-rate": "86.6Mbps-20MHz/1S",
+  "rx-rate": "72.2Mbps-20MHz/1S"
+ }
+]

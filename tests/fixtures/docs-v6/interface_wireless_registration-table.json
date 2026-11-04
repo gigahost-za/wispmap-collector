@@ -1,0 +1,46 @@
+[
+ {
+  ".id": "*1",
+  "interface": "wlan1",
+  "radio-name": "Smit Farm",
+  "mac-address": "B8:69:F4:11:22:33",
+  "ap": "false",
+  "wds": "false",
+  "rx-rate": "130Mbps-20MHz/2S/SGI",
+  "tx-rate": "144.4Mbps-20MHz/2S/SGI",
+  "uptime": "3d4h12m30s",
+  "last-activity": "10ms",
+  "signal-strength": "-62dBm@6Mbps",
+  "signal-to-noise": "38",
+  "tx-signal-strength": "-60",
+  "tx-ccq": "91",
+  "last-ip": "10.20.1.15",
+  "comment": ""
+ },
+ {
+  ".id": "*2",
+  "interface": "wlan1",
+  "radio-name": "",
+  "comment": "Plot 12 Mokoena",
+  "mac-address": "B8:69:F4:44:55:66",
+  "rx-rate": "26Mbps-20MHz/1S",
+  "tx-rate": "39Mbps-20MHz/1S",
+  "uptime": "05:12:40",
+  "signal-strength": "-81dBm@6Mbps",
+  "signal-to-noise": "17",
+  "tx-ccq": "54%",
+  "last-ip": "10.20.1.22"
+ },
+ {
+  ".id": "*3",
+  "interface": "wlan1",
+  "radio-name": "Kerk",
+  "mac-address": "B8:69:F4:77:88:99",
+  "rx-rate": "1.3Gbps",
+  "tx-rate": "866.6Mbps-80MHz/2S/SGI",
+  "uptime": "1w2d",
+  "signal-strength": "-55",
+  "signal-to-noise": "45dB",
+  "tx-ccq": "99"
+ }
+]

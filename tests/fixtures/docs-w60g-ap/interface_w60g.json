@@ -1,0 +1,11 @@
+[
+ {
+  ".id": "*1",
+  "name": "wlan60-1",
+  "mode": "ap-bridge",
+  "ssid": "T009-60G",
+  "frequency": "58320",
+  "running": "true",
+  "disabled": "false"
+ }
+]

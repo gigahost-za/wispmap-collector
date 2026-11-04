@@ -1,0 +1,24 @@
+[
+ {
+  ".id": "*1",
+  "interface": "wlan60-1",
+  "mac-address": "48:8F:5A:0A:0B:0C",
+  "connected": "true",
+  "rssi": "-61",
+  "signal": "74",
+  "tx-phy-rate": "1.9Gbps",
+  "tx-mcs": "7",
+  "distance": "220m"
+ },
+ {
+  ".id": "*2",
+  "interface": "wlan60-1",
+  "mac-address": "48:8F:5A:0D:0E:0F",
+  "connected": "true",
+  "rssi": -70,
+  "signal": "55",
+  "tx-phy-rate": "770Mbps",
+  "tx-mcs": "4",
+  "distance": "410m"
+ }
+]

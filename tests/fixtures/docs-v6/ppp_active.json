@@ -1,0 +1,34 @@
+[
+ {
+  ".id": "*1",
+  "name": "smit",
+  "service": "pppoe",
+  "caller-id": "B8:69:F4:11:22:33",
+  "address": "100.64.0.10",
+  "uptime": "3d4h"
+ },
+ {
+  ".id": "*2",
+  "name": "mokoena",
+  "service": "pppoe",
+  "caller-id": "B8:69:F4:44:55:66",
+  "address": "100.64.0.11",
+  "uptime": "5h"
+ },
+ {
+  ".id": "*3",
+  "name": "kerk",
+  "service": "pppoe",
+  "caller-id": "B8:69:F4:77:88:99",
+  "address": "100.64.0.12",
+  "uptime": "9d"
+ },
+ {
+  ".id": "*4",
+  "name": "branch",
+  "service": "l2tp",
+  "caller-id": "41.1.2.3",
+  "address": "100.64.0.20",
+  "uptime": "2h"
+ }
+]

@@ -1,0 +1,13 @@
+[
+ {
+  "connected": "true",
+  "frequency": "60480",
+  "remote-address": "48:8F:5A:01:02:03",
+  "tx-mcs": "8",
+  "tx-phy-rate": "2.3Gbps",
+  "signal": "80",
+  "rssi": "-58",
+  "tx-sector": "16",
+  "distance": "512.5m"
+ }
+]

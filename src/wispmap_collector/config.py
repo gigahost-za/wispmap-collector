@@ -45,6 +45,7 @@ class Config:
     devices: list[Device] = field(default_factory=list)
     push_s: int = 30                     # how often the uplink sends a batch (server mode)
     neighbors_s: int = 900               # /ip/neighbor every 15 min (and once at startup)
+    slow_s: int = 300                    # sessions + security facts every 5 min (in the poll, from the first one)
 
 
 def load_credentials() -> tuple[str, str]:
@@ -79,6 +80,7 @@ def load_config(path: str | Path = "devices.toml", env_file: str | Path = ".env"
         ping_s=intervals.get("ping_s", 30),
         fast_s=intervals.get("fast_s", 60),
         neighbors_s=intervals.get("neighbors_s", 900),
+        slow_s=intervals.get("slow_s", 300),
         username=username,
         password=password,
         devices=devices,

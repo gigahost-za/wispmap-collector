@@ -413,3 +413,14 @@ are from the manual. Unknowns to check with the first capture: whether the API s
 
 Test fake: `FakeApi.path()` is iterable (print) and callable (`monitor`, recorded in `api.calls`); a missing
 fixture raises TrapError like a router without that menu.
+
+## Wireless, sessions, security (0.6.0, 2026-11-04)
+
+For server release 1.8 / 1.8.1. Every poll: `wireless` = {interfaces, clients} from the legacy wireless package,
+`wifi` (or `wifiwave2` before 7.13) and 60 GHz `w60g` (station table on multipoint APs, `monitor once` per running
+interface on PtP); None when the router has none. Each client: interface, kind, mac, name (radio-name or comment),
+ip (last-ip), signal_dbm, tx_signal_dbm, snr_db, tx/rx_rate_mbps, ccq_pct, quality_pct (60 GHz), uptime_s; at most
+512 clients and 32 interfaces. Every `slow_s` (300 s, from the first poll; server can set it in intervals):
+`sessions` (counts only: pppoe, ppp_other, hotspot, dhcp_bound) and `security` (facts, no user names). Old servers
+ignore the new keys. **Fixtures docs-v6 / docs-v7-wifi / docs-w60g-* are written from the manuals, not captured**:
+`--capture` now also reads these menus (customer columns stripped, at most 10 rows) so a WISP can share real output.

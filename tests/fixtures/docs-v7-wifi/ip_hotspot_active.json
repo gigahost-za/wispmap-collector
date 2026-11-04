@@ -1,0 +1,16 @@
+[
+ {
+  ".id": "*1",
+  "user": "guest1",
+  "address": "10.5.50.10",
+  "mac-address": "AA:00:00:00:00:01",
+  "uptime": "1h"
+ },
+ {
+  ".id": "*2",
+  "user": "guest2",
+  "address": "10.5.50.11",
+  "mac-address": "AA:00:00:00:00:02",
+  "uptime": "5m"
+ }
+]

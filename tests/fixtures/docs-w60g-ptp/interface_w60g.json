@@ -1,0 +1,11 @@
+[
+ {
+  ".id": "*1",
+  "name": "wlan60-1",
+  "mode": "station-bridge",
+  "ssid": "BH-T003-T009",
+  "frequency": "auto",
+  "running": "true",
+  "disabled": "false"
+ }
+]

@@ -1,0 +1,21 @@
+[
+ {
+  ".id": "*1",
+  "name": "admin",
+  "group": "full",
+  "disabled": "false",
+  "last-logged-in": "oct/30/2026 08:12:01"
+ },
+ {
+  ".id": "*2",
+  "name": "noc",
+  "group": "full",
+  "disabled": "false"
+ },
+ {
+  ".id": "*3",
+  "name": "wispmon",
+  "group": "wispmon",
+  "disabled": "false"
+ }
+]

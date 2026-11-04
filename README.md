@@ -59,7 +59,15 @@ docker compose build                      # build the image from this checkout
 | 60 s | uptime, CPU, memory, version | `/system/resource` |
 | 60 s | interfaces: state, traffic, errors | `/interface` |
 | 60 s | OSPF interfaces, neighbours, routes per interface | `/routing/ospf/*`, `/ip/route` (active OSPF routes only) |
+| 60 s | voltage, temperatures, PSU and fans | `/system/health` |
+| 60 s | PoE-out per port: power, voltage, faults | `/interface/ethernet/poe` (+ `monitor once`) |
+| 60 s | wireless: access points and PtP links, each client's signal, SNR, CCQ, rates and uptime | `/interface/wireless`, `/interface/wifi` (or `wifiwave2`), `/interface/w60g` and their registration / station tables (+ `monitor once` on 60 GHz) |
+| 5 min | subscribers online: counts only, no names or addresses | `/ppp/active`, `/ip/hotspot/active`, `/ip/dhcp-server/lease` |
+| 5 min | security facts: services and who may reach them, a default `admin` user, how many full-rights users, this collector's own rights, update channel, open DNS, SOCKS, proxy, MAC Winbox. No user names or passwords | `/ip/service`, `/user`, `/user/group`, `/system/package/update`, `/ip/dns`, `/ip/socks`, `/ip/proxy`, `/tool/mac-server/mac-winbox` |
 | 15 min | neighbours (to suggest links) | `/ip/neighbor` |
+
+Everything is read with print commands (and `monitor once`), so the read-only group
+`/user group add name=wispmon policy=read,api,test` is all it needs. Nothing on the router is changed.
 
 ## Licence
 

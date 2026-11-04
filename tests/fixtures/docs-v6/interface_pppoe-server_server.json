@@ -1,0 +1,8 @@
+[
+ {
+  ".id": "*1",
+  "service-name": "T004",
+  "interface": "bridge-customers",
+  "disabled": "false"
+ }
+]

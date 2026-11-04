@@ -1,0 +1,23 @@
+[
+ {
+  ".id": "*1",
+  "address": "10.20.1.15",
+  "mac-address": "B8:69:F4:11:22:33",
+  "status": "bound",
+  "dynamic": "true"
+ },
+ {
+  ".id": "*2",
+  "address": "10.20.1.22",
+  "mac-address": "B8:69:F4:44:55:66",
+  "status": "bound",
+  "dynamic": "true"
+ },
+ {
+  ".id": "*3",
+  "address": "10.20.1.30",
+  "mac-address": "B8:69:F4:AA:BB:CC",
+  "status": "waiting",
+  "dynamic": "true"
+ }
+]

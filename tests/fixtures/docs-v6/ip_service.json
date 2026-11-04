@@ -1,0 +1,70 @@
+[
+ {
+  ".id": "*0",
+  "name": "telnet",
+  "port": "23",
+  "address": "",
+  "disabled": "false"
+ },
+ {
+  ".id": "*1",
+  "name": "ftp",
+  "port": "21",
+  "address": "",
+  "disabled": "true"
+ },
+ {
+  ".id": "*2",
+  "name": "www",
+  "port": "80",
+  "address": "",
+  "disabled": "false"
+ },
+ {
+  ".id": "*3",
+  "name": "ssh",
+  "port": "22",
+  "address": "10.0.0.0/8",
+  "disabled": "false"
+ },
+ {
+  ".id": "*5",
+  "name": "api",
+  "port": "8728",
+  "address": "10.0.0.0/8,192.168.88.0/24",
+  "disabled": "false"
+ },
+ {
+  ".id": "*6",
+  "name": "winbox",
+  "port": "8291",
+  "address": "",
+  "disabled": "false"
+ },
+ {
+  ".id": "*7",
+  "name": "api-ssl",
+  "port": "8729",
+  "address": "",
+  "disabled": "true"
+ },
+ {
+  ".id": "*8",
+  "name": "btest",
+  "port": "2000",
+  "proto": "tcp",
+  "dynamic": "true",
+  "disabled": "false"
+ },
+ {
+  ".id": "*9",
+  "name": "api",
+  "port": "8728",
+  "proto": "tcp",
+  "local": "10.0.0.1",
+  "remote": "10.0.0.50:41088",
+  "dynamic": "true",
+  "connection": "true",
+  "disabled": "false"
+ }
+]

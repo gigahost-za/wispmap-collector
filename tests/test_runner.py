@@ -95,7 +95,8 @@ def test_poll_output_shape():
     d = Device("core", "h")
     r = Poller(make_cfg(d), connect=lambda **kw: GrowingApi(), clock=Clock()).poll(d)
     assert set(r) == {"type", "device_id", "ts", "cadence", "status", "error", "duration_ms",
-                      "system", "interfaces", "routing", "health", "poe"}
+                      "system", "interfaces", "routing", "health", "poe", "wireless", "sessions", "security"}
+    assert r["wireless"] is None and r["sessions"] is None   # CHR: no radios; these fixtures have no sessions
     assert r["health"] is None                          # real CHR: no sensors
     assert r["poe"] is None                             # ... and no PoE-out (no such menu)
     assert set(r["interfaces"][0]) == {"name", "type", "mac", "running", "disabled", "link_downs",
@@ -198,3 +199,23 @@ def test_emit_writes_one_json_line(capsys):
     out = capsys.readouterr().out
     assert out.endswith("\n") and out.count("\n") == 1
     assert json.loads(out) == {"type": "ping", "device_id": "a"}
+
+
+def test_slow_reads_every_slow_s():
+    """Sessions and security facts come with the first poll, then once every slow_s (default 5 min)."""
+    class SectorApi(FakeApi):          # the CHR's system and interfaces, plus the manual's sector and sessions
+        def path(self, *parts):
+            if (self.dir / f"{'_'.join(parts)}.json").exists():
+                return super().path(*parts)
+            return FakeApi("chr").path(*parts)
+
+    d, clock = Device("sector", "h"), Clock()
+    p = Poller(make_cfg(d), connect=lambda **kw: SectorApi("docs-v6"), clock=clock)
+    first = p.poll(d)
+    assert first["sessions"]["pppoe"] == 3 and first["security"]["default_admin"] is True
+    assert first["wireless"]["interfaces"][0]["clients"] == 3              # wireless: every poll
+    clock.t = 60
+    second = p.poll(d)
+    assert "sessions" not in second and "security" not in second and second["wireless"]
+    clock.t = 300
+    assert p.poll(d)["sessions"]["dhcp_bound"] == 2

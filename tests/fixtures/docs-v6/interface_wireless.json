@@ -1,0 +1,25 @@
+[
+ {
+  ".id": "*5",
+  "name": "wlan1",
+  "mode": "ap-bridge",
+  "ssid": "T004-SEC-N",
+  "band": "5ghz-a/n/ac",
+  "frequency": "5180",
+  "channel-width": "20/40/80mhz-Ceee",
+  "running": "true",
+  "disabled": "false",
+  "radio-name": "T004-SEC-N"
+ },
+ {
+  ".id": "*6",
+  "name": "wlan2",
+  "mode": "station-bridge",
+  "ssid": "BH-T001",
+  "band": "5ghz-a/n",
+  "frequency": "5745",
+  "channel-width": "20mhz",
+  "running": "false",
+  "disabled": "true"
+ }
+]
