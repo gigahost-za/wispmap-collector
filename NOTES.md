@@ -482,3 +482,4 @@ Fixtures: tests/fixtures/chr-v6/{twr-c,twr-d,pop3}/ (read-only user); tests/test
 - v6 first login forces a new admin password (like v7). Imported SSH keys vanished from two of the three v6 CHRs
   30-90 s after import (no log line); lab admin for v6 goes over the API with the password in ~/.lab_admin_pw.
 - `/ip ssh regenerate-host-key` on v6 also removes imported user keys.
+- v6 CHR 6.49.23 in this VirtualBox lab does NOT keep its configuration across any reboot (a clean `/system reboot` too, on IDE or SATA): it boots as "MikroTik" with an empty admin password (seen after VirtualBox stopped every VM at once on 2026-11-08). The v7 CHRs keep theirs. Probably also why imported SSH keys vanished. Lab workaround: live VirtualBox snapshots "configured" of the three v6 VMs; `C:/Users/Gigatech/wispmap-lab-up.sh` (Windows host) restores them and starts the whole lab after a power cut.
