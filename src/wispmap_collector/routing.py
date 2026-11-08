@@ -33,8 +33,28 @@ def _active_ospf_routes(api):
     return (r for r in path if r.get("active") and r.get("ospf"))   # test fakes / libraries without queries
 
 
+_PROTOCOLS = ("bgp", "ospf", "rip", "dhcp", "static", "connect")
+
+
+def poll_default_route(api) -> dict | None:
+    """The active default route: where this router sends internet traffic. On a tower it names the POP it leaves
+    through (the gateway changes when traffic fails over to another POP); on a POP, the upstream."""
+    path = api.path("ip", "route")
+    if Key is not None and hasattr(path, "select"):
+        rows = path.select(Key("dst-address"), Key("gateway"), Key("immediate-gw"), Key("gateway-status"),
+                           *(Key(p) for p in _PROTOCOLS)) \
+                   .where(Key("dst-address") == "0.0.0.0/0", Key("active") == True)
+    else:
+        rows = (r for r in path if r.get("active") and r.get("dst-address") == "0.0.0.0/0")
+    for r in rows:
+        gw = (r.get("gateway") or "").split(",")[0].split("%")[0].strip() or None
+        proto = next((p for p in _PROTOCOLS if r.get(p) is True or r.get(p) == "true"), None)
+        return {"gateway": gw, "interface": route_interface(r), "protocol": proto}
+    return None
+
+
 def poll_routing(api) -> dict:
-    """{"ospf_interfaces": [...], "ospf_neighbors": [...], "routes_via": {iface: count}}.
+    """{"ospf_interfaces": [...], "ospf_neighbors": [...], "routes_via": {iface: count}, "default_route": {...}}.
     Raises librouteros TrapError/MultiTrapError when the router has no such menu (caller decides)."""
     interfaces = []
     for i in api.path("routing", "ospf", "interface"):
@@ -63,4 +83,5 @@ def poll_routing(api) -> dict:
         itf = route_interface(r)
         if itf:
             via[itf] = via.get(itf, 0) + 1
-    return {"ospf_interfaces": interfaces, "ospf_neighbors": neighbors, "routes_via": via}
+    return {"ospf_interfaces": interfaces, "ospf_neighbors": neighbors, "routes_via": via,
+            "default_route": poll_default_route(api)}

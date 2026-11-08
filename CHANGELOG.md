@@ -3,6 +3,29 @@
 Images: `ghcr.io/gigahost-za/wispmap-collector:<version>` for linux/amd64 and linux/arm64.
 Update with `docker compose pull && docker compose up -d`.
 
+## 0.7.0 (2026-11-08)
+
+- Reads BGP on every poll: one row per peer with its state (established, down, disabled), remote and local AS,
+  uptime, when it last started and stopped, and how many routes it sent us (all, and in use). RouterOS 7
+  (`/routing/bgp/session` + `connection`) and RouterOS 6 (`/routing/bgp/peer`). Routers without BGP send nothing.
+- Routes per peer are counted by the router (`/ip/route print count-only`), so a full internet table costs one
+  small answer per peer, and the count is right even when RouterOS's own prefix counter lags.
+- Reads each router's active default route (gateway, interface, protocol): on a tower it shows which POP its traffic
+  leaves through, so WISPMap can see traffic fail over from one POP to another.
+- `--capture` also records the BGP menus.
+- Needs WISPMap with BGP support to show any of it; older servers ignore it. Tested against a two-POP, two-upstream
+  CHR lab (RouterOS 7.23); RouterOS 6 is built from MikroTik's manual.
+
+## 0.6.0 (2026-11-04)
+
+- Reads wireless on every poll: legacy `wireless`, the newer `wifi` (and `wifiwave2`) package and 60 GHz `w60g`.
+  Per radio its mode, SSID, band, width and frequency; per client its signal, what it hears from us, SNR, CCQ or
+  60 GHz quality, rates and uptime.
+- Every 5 minutes: subscribers online (PPPoE, hotspot and DHCP counts only, never names) and the router's security
+  facts for WISPMap's security check (services, users and groups, DNS, SOCKS/proxy, MAC Winbox, RouterOS update
+  channel). Read-only, as always.
+- `--capture` covers all of the above.
+
 ## 0.5.0 (2026-10-31)
 
 - Reads PoE-out on every poll: per port the mode (auto-on / forced-on / off), status (powered on, waiting for

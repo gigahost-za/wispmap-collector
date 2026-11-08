@@ -18,7 +18,10 @@ PATHS = [("system", "resource"), ("system", "health"), ("system", "routerboard")
          ("interface", "w60g"), ("interface", "w60g", "station"),
          ("ppp", "active"), ("ip", "hotspot", "active"), ("ip", "dhcp-server", "lease"),
          ("ip", "service"), ("user",), ("user", "group"), ("system", "package", "update"), ("ip", "dns"),
-         ("ip", "socks"), ("ip", "proxy"), ("tool", "mac-server", "mac-winbox")]
+         ("ip", "socks"), ("ip", "proxy"), ("tool", "mac-server", "mac-winbox"),
+         # 0.7.0: BGP (v7 instance/connection/session, v6 instance/peer)
+         ("routing", "bgp", "instance"), ("routing", "bgp", "connection"), ("routing", "bgp", "session"),
+         ("routing", "bgp", "peer")]
 SCRUB = {"serial-number", "software-id", "license", "system-id", "factory-software", "mac-address", "address4",
          "address6", "address", "identity", "radio-name", "comment", "last-ip", "caller-id", "remote-address",
          "host-name", "active-address", "active-mac-address", "client-id", "user", "servers"}

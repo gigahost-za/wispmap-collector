@@ -28,6 +28,7 @@ from .security import poll_security
 from .sessions import poll_sessions
 from .wireless import poll_wireless
 from .routeros import poll_interfaces, poll_neighbors, poll_system
+from .bgp import poll_bgp
 from .routing import poll_routing
 
 # RouterOS keeps an API session alive after the user's password changes, so a reused session
@@ -237,6 +238,7 @@ class Poller:
         health = self._health(d, api)
         poe = self._poe(d, api)
         wireless = self._optional(d, poll_wireless, api)
+        bgp = self._optional(d, poll_bgp, api)
         slow = {}
         if t0 - self.slow_at.get(d.id, float("-inf")) >= self.cfg.slow_s:   # from the first poll, then every slow_s
             self.slow_at[d.id] = t0
@@ -251,6 +253,7 @@ class Poller:
                 "health": health,
                 "poe": poe,
                 "wireless": wireless,
+                "bgp": bgp,
                 **slow}
 
     def _optional(self, d: Device, read, api, *args):

@@ -95,8 +95,8 @@ def test_poll_output_shape():
     d = Device("core", "h")
     r = Poller(make_cfg(d), connect=lambda **kw: GrowingApi(), clock=Clock()).poll(d)
     assert set(r) == {"type", "device_id", "ts", "cadence", "status", "error", "duration_ms",
-                      "system", "interfaces", "routing", "health", "poe", "wireless", "sessions", "security"}
-    assert r["wireless"] is None and r["sessions"] is None   # CHR: no radios; these fixtures have no sessions
+                      "system", "interfaces", "routing", "health", "poe", "wireless", "bgp", "sessions", "security"}
+    assert r["bgp"] is None and r["wireless"] is None and r["sessions"] is None   # CHR: no radios; these fixtures have no sessions
     assert r["health"] is None                          # real CHR: no sensors
     assert r["poe"] is None                             # ... and no PoE-out (no such menu)
     assert set(r["interfaces"][0]) == {"name", "type", "mac", "running", "disabled", "link_downs",

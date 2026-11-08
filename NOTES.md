@@ -455,3 +455,16 @@ Failure tests (fixtures `tests/fixtures/chr/bgp/<state>/`):
 3. L4 cut on POP2's side only: POP2 unreachable to the collector, its upstream session stayed established (POP fine for
    its own customers). TWR-B blackholed until OSPF's dead interval (40 s) because its own ether3 stayed "running"
    (like a radio link with the far end gone). The iBGP session over loopbacks only dropped at the 3-min hold time.
+
+## BGP and default route (0.7.0, 2026-11-08)
+
+`bgp.py` poll_bgp() every fast poll (None = no BGP configured; TrapError = no menu, runner turns it into None):
+`{"peers": [{name, remote_address, remote_as, local_as, ebgp, remote_id, disabled, established, state, uptime_s,
+last_started, last_stopped, prefix_count, routes, routes_active}]}`. v7 joins connections to sessions by name
+("<connection>-N"); a connection without a session is "disabled" or "idle"; a session without `established` is
+"down". v6 /routing/bgp/peer `state` passes through (idle/connect/active/opensent/openconfirm/established).
+`routes` / `routes_active`: `/ip/route/print =count-only= ?bgp=true ?gateway=<peer>` (4 ms on the lab CORE, one
+number even for a full table); counted only while established. `prefix_count` is RouterOS's counter, kept as a hint.
+iBGP without next-hop-self: routes carry the original next hop, so `routes` is 0 there (use prefix_count).
+routing.poll_default_route(): active 0.0.0.0/0 -> {gateway, interface, protocol}; on towers it names the POP.
+Tests: tests/test_bgp.py on the Part 11b captures (baseline, upstream down, fewer prefixes, iBGP disabled) + v6.
