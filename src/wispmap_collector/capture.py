@@ -21,7 +21,9 @@ PATHS = [("system", "resource"), ("system", "health"), ("system", "routerboard")
          ("ip", "socks"), ("ip", "proxy"), ("tool", "mac-server", "mac-winbox"),
          # 0.7.0: BGP (v7 instance/connection/session, v6 instance/peer)
          ("routing", "bgp", "instance"), ("routing", "bgp", "connection"), ("routing", "bgp", "session"),
-         ("routing", "bgp", "peer")]
+         ("routing", "bgp", "peer"),
+         # OSPF (read since 0.2.0, missing from --capture until 0.7.0)
+         ("routing", "ospf", "interface"), ("routing", "ospf", "neighbor")]
 SCRUB = {"serial-number", "software-id", "license", "system-id", "factory-software", "mac-address", "address4",
          "address6", "address", "identity", "radio-name", "comment", "last-ip", "caller-id", "remote-address",
          "host-name", "active-address", "active-mac-address", "client-id", "user", "servers"}

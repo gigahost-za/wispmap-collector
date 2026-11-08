@@ -1,0 +1,17 @@
+[
+ {
+  "servers": "<removed>",
+  "dynamic-servers": "",
+  "use-doh-server": "",
+  "verify-doh-cert": false,
+  "allow-remote-requests": false,
+  "max-udp-packet-size": 4096,
+  "query-server-timeout": "2s",
+  "query-total-timeout": "10s",
+  "max-concurrent-queries": 100,
+  "max-concurrent-tcp-sessions": 20,
+  "cache-size": 2048,
+  "cache-max-ttl": "1w",
+  "cache-used": 24
+ }
+]

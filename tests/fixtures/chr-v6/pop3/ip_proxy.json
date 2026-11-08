@@ -1,0 +1,21 @@
+[
+ {
+  "enabled": false,
+  "src-address": "::",
+  "port": 8080,
+  "anonymous": false,
+  "parent-proxy": "::",
+  "parent-proxy-port": 0,
+  "cache-administrator": "webmaster",
+  "max-cache-size": "unlimited",
+  "max-cache-object-size": 2048,
+  "cache-on-disk": false,
+  "max-client-connections": 600,
+  "max-server-connections": 600,
+  "max-fresh-time": "3d",
+  "serialize-connections": false,
+  "always-from-cache": false,
+  "cache-hit-dscp": 4,
+  "cache-path": "web-proxy"
+ }
+]

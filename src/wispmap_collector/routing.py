@@ -26,10 +26,11 @@ def route_interface(r: dict) -> str | None:
 
 
 def _active_ospf_routes(api):
+    # Whole rows, filtered on the router: RouterOS 6 drops `gateway-status` and the protocol flags when asked for
+    # chosen columns (.proplist), which left routes_via empty on every v6 router (Part 11c lab, 6.49.23).
     path = api.path("ip", "route")
     if Key is not None and hasattr(path, "select"):
-        return path.select(Key("dst-address"), Key("gateway"), Key("immediate-gw"), Key("gateway-status")) \
-                   .where(Key("active") == True, Key("ospf") == True)                      # noqa: E712
+        return path.select().where(Key("active") == True, Key("ospf") == True)            # noqa: E712
     return (r for r in path if r.get("active") and r.get("ospf"))   # test fakes / libraries without queries
 
 
@@ -41,9 +42,7 @@ def poll_default_route(api) -> dict | None:
     through (the gateway changes when traffic fails over to another POP); on a POP, the upstream."""
     path = api.path("ip", "route")
     if Key is not None and hasattr(path, "select"):
-        rows = path.select(Key("dst-address"), Key("gateway"), Key("immediate-gw"), Key("gateway-status"),
-                           *(Key(p) for p in _PROTOCOLS)) \
-                   .where(Key("dst-address") == "0.0.0.0/0", Key("active") == True)
+        rows = path.select().where(Key("dst-address") == "0.0.0.0/0", Key("active") == True)   # whole row (v6)
     else:
         rows = (r for r in path if r.get("active") and r.get("dst-address") == "0.0.0.0/0")
     for r in rows:

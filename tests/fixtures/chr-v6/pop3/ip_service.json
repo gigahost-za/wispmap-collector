@@ -1,0 +1,70 @@
+[
+ {
+  ".id": "*0",
+  "name": "telnet",
+  "port": 23,
+  "address": "<removed>",
+  "invalid": false,
+  "disabled": false
+ },
+ {
+  ".id": "*1",
+  "name": "ftp",
+  "port": 21,
+  "address": "<removed>",
+  "invalid": false,
+  "disabled": false
+ },
+ {
+  ".id": "*2",
+  "name": "www",
+  "port": 80,
+  "address": "<removed>",
+  "invalid": false,
+  "disabled": false
+ },
+ {
+  ".id": "*4",
+  "name": "ssh",
+  "port": 22,
+  "address": "<removed>",
+  "invalid": false,
+  "disabled": false
+ },
+ {
+  ".id": "*6",
+  "name": "www-ssl",
+  "port": 443,
+  "address": "<removed>",
+  "certificate": "none",
+  "tls-version": "any",
+  "invalid": true,
+  "disabled": true
+ },
+ {
+  ".id": "*7",
+  "name": "api",
+  "port": 8728,
+  "address": "<removed>",
+  "invalid": false,
+  "disabled": false
+ },
+ {
+  ".id": "*8",
+  "name": "winbox",
+  "port": 8291,
+  "address": "<removed>",
+  "invalid": false,
+  "disabled": false
+ },
+ {
+  ".id": "*9",
+  "name": "api-ssl",
+  "port": 8729,
+  "address": "<removed>",
+  "certificate": "none",
+  "tls-version": "any",
+  "invalid": false,
+  "disabled": false
+ }
+]

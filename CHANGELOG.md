@@ -13,6 +13,9 @@ Update with `docker compose pull && docker compose up -d`.
 - Reads each router's active default route (gateway, interface, protocol): on a tower it shows which POP its traffic
   leaves through, so WISPMap can see traffic fail over from one POP to another.
 - `--capture` also records the BGP menus.
+- Fix (RouterOS 6): the count of routes per interface, which WISPMap uses to tell a link's role (active or
+  backup), was always empty on v6 routers: v6 leaves fields out when asked for chosen columns. Found and
+  checked on real RouterOS 6.49.23 routers; every read is now tested against real v6 captures.
 - Needs WISPMap with BGP support to show any of it; older servers ignore it. Tested against a two-POP, two-upstream
   CHR lab (RouterOS 7.23); RouterOS 6 is built from MikroTik's manual.
 

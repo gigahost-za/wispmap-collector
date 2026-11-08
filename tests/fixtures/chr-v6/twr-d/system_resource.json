@@ -1,0 +1,20 @@
+[
+ {
+  "uptime": "22m58s",
+  "version": "6.49.23 (stable)",
+  "build-time": "Oct/07/2026 16:05:16",
+  "free-memory": 213135360,
+  "total-memory": 234881024,
+  "cpu": "Intel(R)",
+  "cpu-count": 1,
+  "cpu-frequency": 3600,
+  "cpu-load": 0,
+  "free-hdd-space": 33562624,
+  "total-hdd-space": 66588672,
+  "write-sect-since-reboot": 488,
+  "write-sect-total": 489,
+  "architecture-name": "x86_64",
+  "board-name": "CHR",
+  "platform": "MikroTik"
+ }
+]

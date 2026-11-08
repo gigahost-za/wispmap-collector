@@ -1,0 +1,10 @@
+[
+ {
+  "enabled": false,
+  "port": 1080,
+  "connection-idle-timeout": "2m",
+  "max-connections": 200,
+  "version": 4,
+  "auth-method": "none"
+ }
+]

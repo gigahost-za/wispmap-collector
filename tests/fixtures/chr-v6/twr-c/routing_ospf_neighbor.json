@@ -1,0 +1,34 @@
+[
+ {
+  ".id": "*81B4E30",
+  "instance": "default",
+  "router-id": "10.255.255.6",
+  "address": "10.0.6.2",
+  "interface": "ether2",
+  "priority": 1,
+  "dr-address": "0.0.0.0",
+  "backup-dr-address": "0.0.0.0",
+  "state": "Full",
+  "state-changes": 5,
+  "ls-retransmits": 0,
+  "ls-requests": 0,
+  "db-summaries": 0,
+  "adjacency": "22m59s"
+ },
+ {
+  ".id": "*81B2120",
+  "instance": "default",
+  "router-id": "10.255.255.2",
+  "address": "10.0.5.1",
+  "interface": "ether1",
+  "priority": 128,
+  "dr-address": "0.0.0.0",
+  "backup-dr-address": "0.0.0.0",
+  "state": "Full",
+  "state-changes": 4,
+  "ls-retransmits": 0,
+  "ls-requests": 0,
+  "db-summaries": 0,
+  "adjacency": "26m24s"
+ }
+]

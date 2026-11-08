@@ -468,3 +468,17 @@ number even for a full table); counted only while established. `prefix_count` is
 iBGP without next-hop-self: routes carry the original next hop, so `routes` is 0 there (use prefix_count).
 routing.poll_default_route(): active 0.0.0.0/0 -> {gateway, interface, protocol}; on towers it names the POP.
 Tests: tests/test_bgp.py on the Part 11b captures (baseline, upstream down, fewer prefixes, iBGP disabled) + v6.
+
+## RouterOS 6 lab (Part 11c, 2026-11-08)
+
+CHR 6.49.23: CHR-TWR-C (10.255.255.5, L5 10.0.5.0/30 from TWR-A ether3; L6 10.0.6.0/30), CHR-TWR-D (.6; L7 10.0.7.0/30),
+CHR-POP3 (.7; eBGP to "Upstream C" AS 64520 on LAB-UPSTREAM ether4 10.0.12.0/30, iBGP to CORE over loopbacks).
+Fixtures: tests/fixtures/chr-v6/{twr-c,twr-d,pop3}/ (read-only user); tests/test_routeros6.py.
+- v6 `.proplist` (librouteros select(keys)) silently drops `gateway-status` and the protocol flags of /ip/route rows:
+  routes_via was {} on every v6 router (since 0.2.0). Filtered reads now ask for whole rows (select() + where).
+- v6 OSPF interface state is "point-to-point" (v7 "ptp"); the server only uses `passive`.
+- v6 BGP: /routing/bgp/peer has `state`, `uptime`, `prefix-count`; routes carry `received-from` (peer name). The
+  count-only-by-gateway approach works the same (POP3: 66 from upstream-c).
+- v6 first login forces a new admin password (like v7). Imported SSH keys vanished from two of the three v6 CHRs
+  30-90 s after import (no log line); lab admin for v6 goes over the API with the password in ~/.lab_admin_pw.
+- `/ip ssh regenerate-host-key` on v6 also removes imported user keys.

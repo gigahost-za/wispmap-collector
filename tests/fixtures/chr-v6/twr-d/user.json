@@ -1,0 +1,10 @@
+[
+ {
+  "group": "full",
+  "disabled": false
+ },
+ {
+  "group": "wispmon",
+  "disabled": false
+ }
+]
