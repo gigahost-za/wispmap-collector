@@ -1,0 +1,9 @@
+[
+ {
+  ".id": "*1",
+  "name": "wisp",
+  "router-id": "10.255.255.4",
+  "as": 64496,
+  "inactive": false
+ }
+]

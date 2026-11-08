@@ -1,0 +1,31 @@
+[
+ {
+  ".id": "*1",
+  "name": "upstream-b",
+  "instance": "wisp",
+  "remote.address": "10.0.11.1",
+  "remote.as": 64510,
+  "local.address": "10.0.11.2",
+  "local.role": "ebgp",
+  "routing-table": "main",
+  "as": 64496,
+  "output.filter-chain": "to-upstream",
+  "output.network": "wisp-nets",
+  "input.filter": "from-upstream",
+  "inactive": false
+ },
+ {
+  ".id": "*2",
+  "name": "ibgp-core",
+  "instance": "wisp",
+  "remote.address": "10.255.255.1",
+  "remote.as": 64496,
+  "local.address": "10.255.255.4",
+  "local.role": "ibgp",
+  "routing-table": "main",
+  "as": 64496,
+  "nexthop-choice": "force-self",
+  "input.filter": "from-ibgp",
+  "inactive": false
+ }
+]

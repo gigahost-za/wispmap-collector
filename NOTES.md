@@ -13,7 +13,9 @@ Spec references: `wispmap/docs/03-collector-protocol.md` (§7 RouterOS adapter),
 | RouterOS | 7.23.8 (long-term), CHR |
 | CHR-CORE | ether1 LAN 192.168.1.201 · ether2 L1 10.0.1.1/30 · ether3 L3 10.0.3.1/30 (disabled) · lo 10.255.255.1 |
 | CHR-TWR-A | ether1 L1 10.0.1.2/30 · ether2 L2 10.0.2.1/30 · lo 10.255.255.2 |
-| CHR-TWR-B | ether1 L2 10.0.2.2/30 · ether2 L3 10.0.3.2/30 (disabled) · lo 10.255.255.3 |
+| CHR-TWR-B | ether1 L2 10.0.2.2/30 · ether2 L3 10.0.3.2/30 (disabled) · ether3 L4 10.0.4.1/30 · lo 10.255.255.3 |
+| CHR-POP2 | ether1 U2 10.0.11.2/30 (Upstream B) · ether2 L4 10.0.4.2/30 · lo 10.255.255.4 (Part 11b) |
+| LAB-UPSTREAM | ether1 LAN 192.168.1.202 · ether2 U1 10.0.10.1 (AS 64500 to CORE ether4 10.0.10.2) · ether3 U2 10.0.11.1 (AS 64510) |
 | VirtualBox internal nets | `wm-l1`, `wm-l2`, `wm-l3` |
 | Monitoring user | `wispmon` (group read,api,ssh), API restricted to 192.168.1.50 |
 
@@ -424,3 +426,32 @@ ip (last-ip), signal_dbm, tx_signal_dbm, snr_db, tx/rx_rate_mbps, ccq_pct, quali
 `sessions` (counts only: pppoe, ppp_other, hotspot, dhcp_bound) and `security` (facts, no user names). Old servers
 ignore the new keys. **Fixtures docs-v6 / docs-v7-wifi / docs-w60g-* are written from the manuals, not captured**:
 `--capture` now also reads these menus (customer columns stripped, at most 10 rows) so a WISP can share real output.
+
+## Lab 11b: two POPs, two upstreams, BGP (2026-11-08)
+
+Guide: server repo `docs/guide/11b-lab-pops-bgp.md` (commands as actually run). WISP AS 64496, block 198.51.100.0/24,
+each POP eBGP to its own upstream + iBGP over loopbacks (force-self, default rejected), OSPF `originate-default=if-installed`
+on both POPs; CORE's static default removed. Upstream A sends default + 257, Upstream B default + 129.
+Hermes admin access: key `~/.ssh/lab_admin` on the dev VM for `admin` on all five CHRs; helpers `~/bin/lab/ros.sh <host>
+<file.rsc>` and `~/bin/lab/bgpcap.py <state>` (captures as the read-only collector user).
+
+RouterOS 7.23 facts:
+- The local AS lives on `/routing bgp instance` (connection `as=` alone fails: "missing value(s) of argument(s) instance").
+  Several instances = several ASes in one router.
+- The read-only user (read,api) can read `/routing/bgp/{instance,connection,session}`. Session rows carry `established`
+  (key ABSENT when down, not false), `uptime`, `last-started`, `last-stopped`, `prefix-count`, `remote.as/address/id`,
+  `local.role` (ibgp only; eBGP rows have an `ebgp` flag key), hold/keepalive, messages/bytes, filters.
+- A DISABLED connection has no session row at all: compare connections with sessions to tell "disabled" from "down".
+- `prefix-count` lags: after Upstream B was cut to 2 prefixes it still said 130, then said 2 after the restore; after an
+  iBGP reset it said 0 while 257 routes were installed. Count received prefixes from `/ip/route where bgp` grouped by
+  `gateway` (eBGP: the peer address; iBGP force-self: the peer loopback) and keep prefix-count only as a hint.
+- `/ip/route` rows have no `belongs-to`/peer field in the API on 7.23.
+
+Failure tests (fixtures `tests/fixtures/chr/bgp/<state>/`):
+1. Upstream A disabled: CORE session down within ~8 s (last-stopped set), CORE's default gone, TWR-A rerouted via
+   TWR-B to POP2 (first hop 10.0.2.2); nothing unreachable. Re-enabled: back via CORE in seconds.
+4. Upstream B filtered to 2 prefixes: routes dropped, counter didn't (see above). Restored.
+5. iBGP disabled on CORE: session vanished on CORE, "down" on POP2; no path change.
+3. L4 cut on POP2's side only: POP2 unreachable to the collector, its upstream session stayed established (POP fine for
+   its own customers). TWR-B blackholed until OSPF's dead interval (40 s) because its own ether3 stayed "running"
+   (like a radio link with the far end gone). The iBGP session over loopbacks only dropped at the 3-min hold time.
