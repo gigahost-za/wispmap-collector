@@ -10,7 +10,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-KINDS = {"routeros", "ping_only"}
+KINDS = {"routeros", "ping_only", "snmp"}
 
 
 class ConfigError(ValueError):
@@ -28,6 +28,7 @@ class Device:
     name: str = ""
     api_tls: bool = False
     credential_profile: str = "default"
+    snmp_port: int = 161                 # kind "snmp" (0.8.0): credentials are SNMP_* in .env, see snmp.py
 
     def __post_init__(self):
         if self.kind not in KINDS:

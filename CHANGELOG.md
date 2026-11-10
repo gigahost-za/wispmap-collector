@@ -3,6 +3,21 @@
 Images: `ghcr.io/gigahost-za/wispmap-collector:<version>` for linux/amd64 and linux/arm64.
 Update with `docker compose pull && docker compose up -d`.
 
+## 0.8.0 (2026-11-10)
+
+- Other makes over SNMP (v2c or v3): devices of kind `snmp` get uptime, interfaces and traffic (64-bit counters when
+  the device has them), read with GET/GETNEXT/GETBULK only, asynchronously beside the RouterOS polling.
+- Ubiquiti airMAX, airFiber, LTU and AF60 and Cambium ePMP radios send their clients' signal, SNR and rates in the
+  same shape as MikroTik radios; UPSs (APC, CyberPower, or any UPS with the standard UPS-MIB) send on battery,
+  charge, runtime, battery voltage, load and whether the battery needs replacing.
+- SNMP credentials live in `.env` (`SNMP_COMMUNITY`, or `SNMP_V3_*`; per profile with a `_<NAME>` suffix) and never
+  leave this machine. A missing profile, a silent device (or wrong community) and a refused v3 login each say so.
+- `--capture-snmp HOST` dumps what a device answers for WISPMap's MIBs as `.snmprec`, with names, addresses, MACs and
+  serials replaced, to build fixtures from hardware we don't have.
+- Built and tested against the vendors' MIBs and recordings of real devices (airOS 8, AF11, LTU, AF60, ePMP,
+  APC, CyberPower) replayed in an SNMP simulator; not yet seen on a live Ubiquiti or Cambium network.
+- Needs WISPMap 1.13 to show SNMP devices; older servers ignore the new fields. New dependency: pysnmp.
+
 ## 0.7.0 (2026-11-08)
 
 - Reads BGP on every poll: one row per peer with its state (established, down, disabled), remote and local AS,

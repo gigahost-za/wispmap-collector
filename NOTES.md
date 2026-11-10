@@ -483,3 +483,18 @@ Fixtures: tests/fixtures/chr-v6/{twr-c,twr-d,pop3}/ (read-only user); tests/test
   30-90 s after import (no log line); lab admin for v6 goes over the API with the password in ~/.lab_admin_pw.
 - `/ip ssh regenerate-host-key` on v6 also removes imported user keys.
 - v6 CHR 6.49.23 in this VirtualBox lab does NOT keep its configuration across any reboot (a clean `/system reboot` too, on IDE or SATA): it boots as "MikroTik" with an empty admin password (seen after VirtualBox stopped every VM at once on 2026-11-08). The v7 CHRs keep theirs. Probably also why imported SSH keys vanished. Lab workaround: live VirtualBox snapshots "configured" of the three v6 VMs; `C:/Users/Gigatech/wispmap-lab-up.sh` (Windows host) restores them and starts the whole lab after a power cut.
+
+## 0.8.0: SNMP (2026-11-10)
+
+snmp.py (pysnmp 7 asyncio client: get, bulk walk, present() = one GETNEXT with every vendor base, credential
+profiles from .env), snmpdev.py (pure drivers: {oid: value} -> system / interfaces / wireless / health / ups),
+snmppoll.py (SnmpPoller: family cached 6 h, only the columns used, 45 s per device, 32 at a time, rates like
+RouterOS), snmpcapture.py (--capture-snmp, scrubbed .snmprec). runner.poll_cycle splits devices by kind; neighbour
+tables stay RouterOS-only.
+
+- Checked against MIBs (a small MIB reader resolved every OID, unit and enum) and LibreNMS's snmprec recordings
+  replayed with snmpsim (`~/bin/snmpsim/snmpsim.sh`, community = recording name). Lessons: AF11 txFrequency is kHz;
+  airOS rates bit/s; LTU repeats eth0/ath0; ePMP ifName repeats; CyberPower status 7 = rebooting; UPS-MIB status 3 =
+  battery low (not replace); snmpsim returns nothing for a GETNEXT before the first record (capture falls back to GET).
+- Tests: tests/test_snmp.py with hand-written fixtures (the recordings are GPL, kept out of the repo).
+- Wrong v2c community = silence = timeout, hence the hint in the error.

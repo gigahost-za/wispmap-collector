@@ -1,6 +1,6 @@
 [project]
 name = "wispmap-collector"
-version = "0.7.0"
+version = "0.8.0"
 description = "WISPMap collector: pings and polls MikroTik devices inside a WISP network"
 readme = "README.md"
 authors = [
@@ -10,6 +10,7 @@ requires-python = ">=3.12"
 dependencies = [
     "httpx>=0.28.1",
     "librouteros>=4.2.2",
+    "pysnmp>=7.1",
     "python-dotenv>=1.2.4",
     "uuid6>=2025.0.1",
 ]

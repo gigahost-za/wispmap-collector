@@ -20,7 +20,7 @@ from .config import Config, ConfigError, Device
 HELLO_EVERY_S = 6 * 3600
 CHECK_EVERY_S = 60
 MAX_SKEW_S = 30
-_DEVICE_FIELDS = {"id", "name", "kind", "host", "api_port", "api_tls", "credential_profile", "ping", "poll"}
+_DEVICE_FIELDS = {"id", "name", "kind", "host", "api_port", "api_tls", "credential_profile", "ping", "poll", "snmp_port"}
 
 
 def device_from_server(d: dict) -> Device | None:

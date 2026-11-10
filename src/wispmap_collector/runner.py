@@ -22,6 +22,8 @@ from librouteros.exceptions import ConnectionClosed, MultiTrapError, TrapError
 from .config import Config, Device
 from .ping import run_ping
 from .rates import RateCalculator
+from .snmp import SnmpAuthError
+from .snmppoll import SnmpPoller
 from .health import poll_health
 from .poe import poll_poe
 from .security import poll_security
@@ -135,6 +137,8 @@ def classify(exc: Exception) -> str:
     if isinstance(exc, ConnectionRefusedError):
         return "refused"
     if isinstance(exc, (TrapError, MultiTrapError)) and "invalid user name or password" in str(exc):
+        return "auth_failed"
+    if isinstance(exc, SnmpAuthError):
         return "auth_failed"
     if isinstance(exc, OSError) and exc.errno in (errno.EHOSTUNREACH, errno.ENETUNREACH):
         return "unreachable"
@@ -314,12 +318,20 @@ def _in_threads(poller, fn, devices):
     return asyncio.gather(*(loop.run_in_executor(pool, fn, d) for d in devices))
 
 
-async def poll_cycle(poller: Poller, devices: list[Device]) -> list[dict]:
-    poller.sync(devices)
-    return list(await _in_threads(poller, poller.poll, devices))
+async def poll_cycle(poller: Poller, devices: list[Device], snmp: SnmpPoller | None = None) -> list[dict]:
+    ros = [d for d in devices if d.kind != "snmp"]
+    snmp_devs = [d for d in devices if d.kind == "snmp"]
+    poller.sync(ros)
+    if snmp is not None:
+        snmp.forget({d.id for d in snmp_devs})
+    if not snmp_devs or snmp is None:
+        return list(await _in_threads(poller, poller.poll, ros))
+    ros_results, snmp_results = await asyncio.gather(_in_threads(poller, poller.poll, ros), snmp.poll_all(snmp_devs))
+    return list(ros_results) + snmp_results
 
 
 async def neighbor_cycle(poller: Poller, devices: list[Device]) -> list[dict]:
+    devices = [d for d in devices if d.kind != "snmp"]          # neighbour tables are RouterOS-only so far
     results = await _in_threads(poller, poller.poll_neighbors, devices)
     return [r for r in results if r is not None]
 
@@ -346,6 +358,7 @@ async def run(cfg: Config, sink=None, background=()) -> None:
     Device lists and intervals are read from cfg on every cycle, so config reloads apply live."""
     open_files = raise_open_files()
     poller = Poller(cfg)
+    snmp = SnmpPoller(cfg.fast_s)
     polled = [d for d in cfg.devices if d.poll]
     print(f"wispmap-collector: {len(cfg.devices)} devices ({len(polled)} polled), "
           f"ping every {cfg.ping_s}s, poll every {cfg.fast_s}s, {poll_workers()} poll threads, "
@@ -361,7 +374,7 @@ async def run(cfg: Config, sink=None, background=()) -> None:
     try:
         await asyncio.gather(
             every(lambda: cfg.ping_s, lambda: ping_cycle(cfg), sink),
-            every(lambda: cfg.fast_s, lambda: poll_cycle(poller, [d for d in cfg.devices if d.poll]), sink),
+            every(lambda: cfg.fast_s, lambda: poll_cycle(poller, [d for d in cfg.devices if d.poll], snmp), sink),
             every(lambda: cfg.neighbors_s, lambda: neighbor_cycle(poller, [d for d in cfg.devices if d.poll]), sink),
             *background,
         )
@@ -369,5 +382,6 @@ async def run(cfg: Config, sink=None, background=()) -> None:
         print("wispmap-collector: stopping", file=sys.stderr)
     finally:
         poller.close()
+        snmp.close()
         for sig in (signal.SIGINT, signal.SIGTERM):
             loop.remove_signal_handler(sig)

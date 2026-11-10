@@ -69,6 +69,25 @@ docker compose build                      # build the image from this checkout
 Everything is read with print commands (and `monitor once`), so the read-only group
 `/user group add name=wispmon policy=read,api,test` is all it needs. Nothing on the router is changed.
 
+### Other makes over SNMP (0.8.0)
+
+Devices of kind `snmp` are read with SNMP GET/GETNEXT/GETBULK only (v2c or v3), every 60 s:
+
+| What | MIB |
+|---|---|
+| uptime, name, interfaces: state, traffic (64-bit counters when present), errors | SNMPv2-MIB, IF-MIB, HOST-RESOURCES-MIB (CPU) |
+| Ubiquiti airMAX (airOS 6/8): radio, each station's signal, SNR, CCQ, rates, connected time | UBNT-AirMAX-MIB |
+| Ubiquiti airFiber (AF5/11/24...), LTU, AF60: link signal at both ends, capacity | UBNT-AirFIBER-MIB, UBNT-AFLTU-MIB, UI-AF60-MIB |
+| Cambium ePMP: radio, each subscriber's signal and SNR both ways, quality | CAMBIUM-PMP80211-MIB |
+| UPS: on battery, charge, runtime, battery voltage, load, input voltage, replace-battery | APC PowerNet, CyberPower CPS-MIB, UPS-MIB (RFC 1628) |
+
+Credentials go in `.env` and stay there: `SNMP_COMMUNITY=...` (v2c), or `SNMP_V3_USER`, `SNMP_V3_AUTH_PROTO`
+(SHA, SHA256, SHA512, MD5), `SNMP_V3_AUTH_KEY`, `SNMP_V3_PRIV_PROTO` (AES, AES256, DES), `SNMP_V3_PRIV_KEY`. A device
+whose credential profile is `towers` uses `SNMP_COMMUNITY_TOWERS` (and so on). Prefer v3 where the device has it.
+
+A device we don't know yet? `docker compose run --rm collector wispmap-collector --capture-snmp 10.0.0.20 > dev.snmprec`
+writes what it answers, with names, addresses, MACs and serials replaced, so it can be added as a test fixture.
+
 ## Licence
 
 Apache License 2.0. See `LICENSE`.

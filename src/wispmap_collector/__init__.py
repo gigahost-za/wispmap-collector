@@ -17,6 +17,9 @@ from .runner import run
 
 def main() -> None:
     load_dotenv(".env")
+    if "--capture-snmp" in sys.argv[1:]:             # read-only SNMP dump as .snmprec (fixtures)
+        from .snmpcapture import main as capture_snmp
+        sys.exit(capture_snmp([a for a in sys.argv[1:] if a != "--capture-snmp"]))
     if "--capture" in sys.argv[1:]:                  # read-only dump of a router's API answers (fixtures)
         from .capture import main as capture
         hosts = [a for a in sys.argv[1:] if not a.startswith("--")]
