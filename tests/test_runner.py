@@ -219,3 +219,41 @@ def test_slow_reads_every_slow_s():
     assert "sessions" not in second and "security" not in second and second["wireless"]
     clock.t = 300
     assert p.poll(d)["sessions"]["dhcp_bound"] == 2
+
+
+def test_api_tls_wraps_the_socket():
+    """api_tls: the session is opened through TLS (no certificate check: RouterOS certificates are self-signed)."""
+    import ssl
+
+    from wispmap_collector.runner import classify, tls_wrapper
+    calls = []
+
+    def fake_connect(**kw):
+        calls.append(kw)
+        return GrowingApi(step=1)
+
+    plain = Device(id="r1", host="10.0.0.1")
+    tls = Device(id="r2", host="10.0.0.2", api_port=8729, api_tls=True)
+    p = Poller(make_cfg(plain, tls), connect=fake_connect, clock=Clock())
+    p._session(plain)
+    p._session(tls)
+    assert "ssl_wrapper" not in calls[0]
+    assert calls[1]["port"] == 8729 and callable(calls[1]["ssl_wrapper"])
+    p.sync([plain, Device(id="r2", host="10.0.0.2", api_port=8729, api_tls=False)])   # TLS switched off: reconnect
+    assert "r2" not in p.sessions and "r1" in p.sessions
+    import socket
+    a, b = socket.socketpair()
+    try:
+        wrap = tls_wrapper("10.0.0.2")
+        ctx_sock = None
+        try:
+            a.settimeout(0.2)
+            ctx_sock = wrap(a)                       # handshake fails (nobody speaks TLS): it was attempted
+        except (ssl.SSLError, OSError):
+            pass
+        assert ctx_sock is None
+    finally:
+        a.close()
+        b.close()
+    assert classify(ssl.SSLError("no shared cipher")) == "tls_error"
+

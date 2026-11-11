@@ -3,6 +3,13 @@
 Images: `ghcr.io/gigahost-za/wispmap-collector:<version>` for linux/amd64 and linux/arm64.
 Update with `docker compose pull && docker compose up -d`.
 
+## 0.8.1 (2026-11-10)
+
+- Fix: "API over TLS" on a device was ignored, so the collector spoke plain text to the router's api-ssl port (8729)
+  and every poll failed. It now uses TLS 1.2 or newer there. The router's certificate isn't checked (RouterOS API
+  certificates are nearly always self-signed), but the traffic and the password are encrypted. A TLS failure (for
+  example api-ssl without a certificate on the router) is reported as `tls_error`.
+
 ## 0.8.0 (2026-11-10)
 
 - Other makes over SNMP (v2c or v3): devices of kind `snmp` get uptime, interfaces and traffic (64-bit counters when

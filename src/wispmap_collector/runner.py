@@ -9,6 +9,7 @@ import errno
 import json
 import os
 import signal
+import ssl
 import sys
 import threading
 import time
@@ -83,6 +84,17 @@ class BufferedTransport:
         self.sock.close()
 
 
+def tls_wrapper(host: str):
+    """For api-ssl (8729): TLS 1.2 or newer, without checking the certificate. RouterOS's API certificates are
+    nearly always self-signed, so checking would refuse every router; the traffic, password included, is still
+    encrypted. (A man-in-the-middle on the management network could still read it: keep 8729 on that network.)"""
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+    ctx.minimum_version = ssl.TLSVersion.TLSv1_2
+    return lambda sock: ctx.wrap_socket(sock, server_hostname=host)
+
+
 def connect_buffered(**kwargs):
     """librouteros.connect, then buffered reads for the rest of the session (login itself is a few words)."""
     api = ros_connect(**kwargs)
@@ -140,6 +152,8 @@ def classify(exc: Exception) -> str:
         return "auth_failed"
     if isinstance(exc, SnmpAuthError):
         return "auth_failed"
+    if isinstance(exc, ssl.SSLError):                  # api-ssl: no certificate on the router, or TLS too old
+        return "tls_error"
     if isinstance(exc, OSError) and exc.errno in (errno.EHOSTUNREACH, errno.ENETUNREACH):
         return "unreachable"
     return "error"
@@ -182,10 +196,11 @@ class Poller:
         if d.id in self.sessions and now - self.session_born[d.id] > self.session_max_age_s:
             self._drop(d)                  # periodic fresh login surfaces changed passwords
         if d.id not in self.sessions:
+            tls = {"ssl_wrapper": tls_wrapper(d.host)} if d.api_tls else {}
             self.sessions[d.id] = self.connect(host=d.host, port=d.api_port, username=self.cfg.username,
-                                               password=self.cfg.password, timeout=5)
+                                               password=self.cfg.password, timeout=5, **tls)
             self.session_born[d.id] = now
-            self.session_addr[d.id] = (d.host, d.api_port)
+            self.session_addr[d.id] = (d.host, d.api_port, d.api_tls)
         return self.sessions[d.id]
 
     def _drop(self, d: Device) -> None:
@@ -208,7 +223,7 @@ class Poller:
 
     def sync(self, devices: list[Device]) -> None:
         """After a config reload: close sessions of devices that are gone or whose address changed."""
-        wanted = {d.id: (d.host, d.api_port) for d in devices}
+        wanted = {d.id: (d.host, d.api_port, d.api_tls) for d in devices}
         for dev_id in list(self.sessions):
             if self.session_addr.get(dev_id) != wanted.get(dev_id):
                 self._drop_id(dev_id)

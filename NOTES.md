@@ -498,3 +498,11 @@ tables stay RouterOS-only.
   battery low (not replace); snmpsim returns nothing for a GETNEXT before the first record (capture falls back to GET).
 - Tests: tests/test_snmp.py with hand-written fixtures (the recordings are GPL, kept out of the repo).
 - Wrong v2c community = silence = timeout, hence the hint in the error.
+
+## 0.8.1: API over TLS (2026-11-10)
+
+- `api_tls` came from the server but was never used: the collector spoke plain text to 8729 and every poll failed.
+  `runner.tls_wrapper()` now wraps the socket (TLS 1.2+, `check_hostname=False`, `CERT_NONE`, since RouterOS API
+  certificates are nearly always self-signed; still encrypted, keep it on the management network). TLS failures
+  report `tls_error`. Found while writing the server's docs. Not yet tried against a live api-ssl (the lab CHRs were
+  off): try `~/bin/lab/apissl.rsc` on CHR-CORE when the lab is up.
