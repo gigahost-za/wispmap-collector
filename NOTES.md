@@ -504,5 +504,6 @@ tables stay RouterOS-only.
 - `api_tls` came from the server but was never used: the collector spoke plain text to 8729 and every poll failed.
   `runner.tls_wrapper()` now wraps the socket (TLS 1.2+, `check_hostname=False`, `CERT_NONE`, since RouterOS API
   certificates are nearly always self-signed; still encrypted, keep it on the management network). TLS failures
-  report `tls_error`. Found while writing the server's docs. Not yet tried against a live api-ssl (the lab CHRs were
-  off): try `~/bin/lab/apissl.rsc` on CHR-CORE when the lab is up.
+  report `tls_error`. Found while writing the server's docs. Tested live 2026-11-11 on CHR-CORE (7.25.1, api-ssl with a
+  certificate from a local CA): TLS 1.2, Poller session OK; plain to 8729 = ConnectionClosed; no certificate =
+  `tls_error`. CHR-CORE keeps api-ssl enabled (only from the dev VM) for future tests.
